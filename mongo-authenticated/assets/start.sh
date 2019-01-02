@@ -1,6 +1,6 @@
 set -x
 
-. ./secrets.sh
+. ./build_mongo-startup.sh
 
 mongod="/usr/bin/mongod"
 mongod_log="/var/log/mongodb/mongod.log"
