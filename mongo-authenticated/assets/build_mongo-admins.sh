@@ -40,18 +40,11 @@ then
 	exit 1
 fi
 
-cat > /mongo-startup.js <<EOF
-
-load("/UserLoader.js")
-
+cat > /mongo-admins.js <<EOF
+// added from mongo-authenticated
 UserLoader.addUserAdmin("${ua_name}", "${ua_password}");
-
 UserLoader.addUser("${dba_name}", "${dba_password}", ["dbAdminAnyDatabase"]);
 UserLoader.addUser("${bua_name}", "${bua_password}", ["backup", "restore"]);
-
-UserLoader.load();
-
-quit();
 
 EOF
 
