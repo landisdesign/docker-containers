@@ -4,15 +4,15 @@ This container automatically starts up and restores an authenticated MongoDB ins
 
 `mongo-authenticated` uses credentials found under `/run/secrets` to create three users:
 
-##### User administrator (`mongo_user_admin_name`, `mongo_user_admin_pwd`)
+#### User administrator (`mongo_user_admin_name`, `mongo_user_admin_pwd`)
 
 The user administrator creates all other users in the database.
 	
-##### Database administrator (`mongo_db_admin_name`, `mongo_db_admin_pwd`)
+#### Database administrator (`mongo_db_admin_name`, `mongo_db_admin_pwd`)
 
 The database administrator has the power to create and drop databases. Individual applications should not have database create/drop privileges. They should only have permission to do document-level CRUD operations within an existing database.
 	
-##### Backup administrator (`mongo_backup_admin_name`, `mongo_backup_admin_pwd`)
+#### Backup administrator (`mongo_backup_admin_name`, `mongo_backup_admin_pwd`)
 
 The backup administrator has backup and restore privileges for all databases in the instance.
 
@@ -30,7 +30,7 @@ In addition to the credentials described above, this container requires the foll
 
 The following files are intended to be replaced in descendant containers:
 
-##### /mongo-users.js
+#### /mongo-users.js
 
 Additional MongoDB users (admins as well as application interface roles) can be defined in this JavaScript file. Each user is defined in a line as follows:
 
@@ -42,7 +42,7 @@ UserBuilder.addUser(name, password, roles);
 
 These users are added after the admin users defined above. If `name` matches the name of an existing user, the roles are merged into the existing user. The `password` field is ignored in this case, and the existing user's password is unchanged.
 
-##### /pre_startup.sh
+#### /pre_startup.sh
 
 This shell script file is executed after the default support files are created and mongo-related shell variables are defined, but before `mongod` is started. This file can be replaced in descendant containers by script files that generate `/mongo-users.js`, for example.
 
@@ -53,6 +53,6 @@ The following shell variables are populated before this file is executed:
 * `mongo`: The location of the `mongo` shell binary
 * `mongo_startup_js`: The location of the startup file that creates the admin users and runs mongo-users.js
 
-##### /post_startup.sh
+#### /post_startup.sh
 
 This shell script file is executed after `mongod` is started and the users are defined. In this container, it automatically sets up and restores the database from the location described above.
