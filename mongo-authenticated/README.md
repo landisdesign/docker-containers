@@ -36,7 +36,7 @@ Additional MongoDB users (admins as well as application interface roles) can be 
 UserBuilder.addUser(name, password, roles);
 ```
 
-`roles` is an array with one or more role elements, as defined in the MongoDB documentation for [`createUser`]https://docs.mongodb.com/manual/reference/command/createUser/#roles).
+`roles` is an array with one or more role elements, as defined in the MongoDB documentation for [`createUser`](https://docs.mongodb.com/manual/reference/command/createUser/#roles).
 
 These users are added after the admin users defined above. If `name` matches the name of an existing user, the roles are merged into the existing user. The `password` field is ignored in this case, and the existing user's password is unchanged.
 
