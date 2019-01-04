@@ -26,7 +26,9 @@ In addition to the credentials described above, this container requires the foll
 
 ## Code extension points
 
-`mongo-authenticated` is intended to be the root of an authenticated cluster as well as individual applications. Since this container is based in Alpine Linux, all shell files are run using `dash`. **Be sure that any `.sh` files you replace below are POSIX-compatible.**
+`mongo-authenticated` is intended to be the root of an authenticated cluster as well as individual applications. To provide flexibility, the following files can be overwritten to extend the basic autostart functionality.
+
+Since this container is based in Alpine Linux, all shell files are run using `dash`. **Be sure that any `.sh` files you replace below are POSIX-compatible.** BASHisms will break the container.
 
 The following files are intended to be replaced in descendant containers:
 
