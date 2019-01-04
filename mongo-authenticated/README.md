@@ -4,15 +4,15 @@ This container automatically starts up and restores an authenticated MongoDB ins
 
 `mongo-authenticated` uses credentials found under `/run/secrets` to create three users:
 
-### User administrator (`mongo_user_admin_name`, `mongo_user_admin_pwd`)
+###### User administrator (`mongo_user_admin_name`, `mongo_user_admin_pwd`)
 
 The user administrator creates all other users in the database.
 	
-### Database administrator (`mongo_db_admin_name`, `mongo_db_admin_pwd`)
+###### Database administrator (`mongo_db_admin_name`, `mongo_db_admin_pwd`)
 
 The database administrator has the power to create and drop databases. Individual applications should not have database create/drop privileges. They should only have permission to do document-level CRUD operations within an existing database.
 	
-### Backup administrator (`mongo_backup_admin_name`, `mongo_backup_admin_pwd`)
+###### Backup administrator (`mongo_backup_admin_name`, `mongo_backup_admin_pwd`)
 
 The backup administrator has backup and restore privileges for all databases in the instance.
 
@@ -28,7 +28,7 @@ In addition to the credentials described above, this container requires the foll
 
 `mongo-authenticated` is intended to be the root of an authenticated cluster as well as individual applications. It has the following files that are intended to be replaced in descendant containers:
 
-### `/mongo-users.js`
+###### `/mongo-users.js`
 
 Additional MongoDB users (admins as well as application interface roles) can be defined in this JavaScript file. Each user is defined in a line as follows:
 
