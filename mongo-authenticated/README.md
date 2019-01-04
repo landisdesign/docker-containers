@@ -44,7 +44,7 @@ These users are added after the admin users defined above. If `name` matches the
 
 This shell script file is executed after the default support files are created and mongo-related shell variables are defined, but before `mongod` is started. This file can be replaced in descendant containers by script files that generate `/mongo-users.js`, for example.
 
-The following shell variable are populated before this file is executed:
+The following shell variables are populated before this file is executed:
 
 * `mongod`: The location of the `mongod` binary
 * `mongod_log`: The location of the log file
