@@ -3,7 +3,6 @@ FROM alpine:3.8
 WORKDIR /opt/java/jdk-12
 
 COPY --chown=root jdk-12 .
-RUN unzip lib/modules.zip && rm -f lib/modules.zip
 
 COPY *.sh bin
 
@@ -11,6 +10,10 @@ WORKDIR /opt/java/jdk-12/bin
 
 RUN /bin/sh paxctl.sh && \
     rm paxctl.sh
+
+WORKDIR /opt/java/jdk-12/lib
+
+RUN unzip modules.zip && rm -f modules.zip
 
 FROM alpine:3.8
 

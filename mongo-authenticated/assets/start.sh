@@ -1,5 +1,3 @@
-set -x
-
 mongod="/usr/bin/mongod"
 mongod_log="/var/log/mongodb/mongod.log"
 mongod_keyfile="/keyfile"
@@ -11,7 +9,7 @@ mongo_startup_js="/mongo-startup.js"
 
 . ./pre_startup.sh
 
-$mongod --bind_ip_all --smallfiles --logpath $mongod_log --keyFile $mongod_keyfile &
+$mongod --bind_ip_all --smallfiles --logpath $mongod_log --keyFile $mongod_keyfile ${MONGO_OPTIONS} &
 
 while ! $mongo $mongo_startup_js
 do

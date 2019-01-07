@@ -5,6 +5,6 @@ mongorestore_src=$(echo "${mongorestore_src}" | sed -e 's+/$++')
 
 for x in ${mongorestore_src}/*/*
 do
-	$mongorestore -u "${bua_name}" -p "${bua_password}" --authenticationDatabase "admin" "${mongorestore_src}"
+	$mongorestore -u "${mongo_backup_admin_name}" -p "${mongo_backup_admin_pwd}" --authenticationDatabase "admin" "${mongorestore_src}"
 	break
 done

@@ -24,6 +24,8 @@ In addition to the credentials described above, this container requires the foll
 
 `MONGO_BACKUP_NAME`: This is used by `/post_startup.sh` to identify which subdirectory in `/data/mongodb/backup` to restore the database from. If not provided, the database restore will be attempted from the host directory mounted at `/data/mongodb/backup`.
 
+`MONGO_OPTIONS` (optional): If provided, this will be added to the command line when starting `mongod`.
+
 ## Code extension points
 
 `mongo-authenticated` is intended to be the root of an authenticated cluster as well as individual applications. To provide flexibility, the following files can be overwritten to extend the basic autostart functionality.
@@ -57,4 +59,4 @@ The following shell variables are populated before this file is executed:
 
 #### /post_startup.sh
 
-This shell script file is executed after `mongod` is started and the users are defined. In this container, it automatically sets up and restores the database from the location described above.
+This shell script file is executed after `mongod` is started and the users are defined. In this container, it automatically sets up and restores the database from the location described above. If you want to maintain this functionality in a new image while adding new functionality, consider copying this file to a location unique to your image, then have your version of `/post_startup.sh` call this moved file.

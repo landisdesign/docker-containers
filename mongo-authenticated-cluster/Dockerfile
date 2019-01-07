@@ -1,3 +1,7 @@
-FROM mongo:4.0.3-xenial
-COPY start.sh secrets.sh mongo-startup.js keyfile /
+FROM landisdesign/mongo-authenticated:4.0.3-xenial
+
+RUN mv build_mongo-admins.sh build_initial_mongo-admins.sh
+
+COPY assets/* .
+
 ENTRYPOINT ["sh", "/start.sh"]

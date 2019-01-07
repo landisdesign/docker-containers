@@ -1,11 +1,8 @@
 FROM landisdesign/java-alpine:12-3.8
 
-WORKDIR /tomcat
-
-COPY apache-tomcat-9.0.12 .
+COPY apache-tomcat-9.0.12 /tomcat
 
 ENV CATALINA_HOME=/tomcat
 
-ENTRYPOINT ["/bin/sh", "bin/catalina.sh"]
-CMD ["startup"]
-
+ENTRYPOINT ["/bin/sh", "/tomcat/bin/catalina.sh"]
+CMD ["run"]
