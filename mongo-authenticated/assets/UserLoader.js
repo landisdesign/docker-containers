@@ -195,14 +195,6 @@ const UserLoader = (function() {
 		}
 	}
 
-function printError(message, error) {
-	print("*\n*\n*\n***" + message + ":\n* {");
-	for (key in error) {
-		print("*  " + key + ": " + error[key]);
-	}
-	print("*}\n*\n*\n*");
-}
-
 	function splitAdminByRoles(admin) {
 		let adminData = admin.out();
 		adminRoles = adminData.roles.reduce(userRoleSplitter, { userRoles: [], predefinedRoles: [] });
@@ -282,7 +274,6 @@ function printError(message, error) {
 			}
 			catch (e) {
 				if (!tryUpdate) {
-printError("Error thrown adding user " + userData.user + "/" + userData.pwd + "; tryUpdate=" + tryUpdate, e);
 					throw e;
 				}
 				else {
@@ -304,7 +295,6 @@ printError("Error thrown adding user " + userData.user + "/" + userData.pwd + ";
 				return true;
 			}
 			catch (e) {
-printError("Error thrown updating user " + userData.user + "/" + userData.pwd + "; error was" + error, e);
 				if (error !== null) { // If both add and update fail, report add error as initial problem.
 					throw error;
 				}
