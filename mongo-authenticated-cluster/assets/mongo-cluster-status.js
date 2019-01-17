@@ -70,6 +70,8 @@ const readyState = memberStates.reduce(
 	{isUp: true, hasPrimary: false}
 );
 
+memberStates.forEach( ({host, name}) => { print(host + ": " + name); } );
+
 if (readyState.isUp && readyState.hasPrimary) { // making eplicit for readability
 	print(1);
 }
