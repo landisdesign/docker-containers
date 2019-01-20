@@ -1,152 +1,292 @@
-const UserLoader = (function() {
+const UserUtilities = {
+	userAdminRoles:
+		["userAdmin", "userAdminAnyDatabase", "hostManager"],
 
-	// DRY'ing and identifying constants
-	const userAdminRoles = ["userAdmin", "userAdminAnyDatabase", "hostManager"];
+	roleClone: (
+		x => (typeof x === "object") && ("role" in x) ? {role: x.role, db: x.db} : x
+	),
 
-	const roleClone = x => (typeof x === "object") && ("role" in x) ? {role: x.role, db: x.db} : x;
-
-	const roleMatch = testRole => (x => {
-		if ( (typeof testRole === "object") && ("role" in testRole) ) {
-			return (typeof x === "object") && ("role" in x) && (x.role == testRole.role) && (x.db == testRole.db);
-		}
-		else {
-			return (x == testRole);
-		}
-	});
-
-	const userRoleSplitter = (acc, testRole) => {
-		let isUserRole = false;
-
-		if (typeof testRole === "object") {
-			isUserRole = ( ("role" in testRole) && (testRole.role in roles) );
-		}
-		else {
-			isUserRole = (testRole in roles);
-		}
-
-		acc[isUserRole ? "userRoles" : "predefinedRoles"].push(testRole);
-
-		return acc;
-	};
-
-	const userMatch = testUser => (x => x.nameEquals(testUser) );
-
-	const User = {
-		init: function(user, password, roles) {
-			this.user = user;
-			this.pwd = password;
-			this.roles = roles.map(roleClone);
-			this.deployed = false;
-			return this;
-		},
-
-		isDeployed: function() {
-			return this.deployed;
-		},
-
-		setDeployed: function(deploy) {
-			this.deployed = deploy;
-		},
-
-		out: function() {
-			return {
-				user: this.user,
-				pwd: this.pwd,
-				roles: this.roles.map(roleClone)
-			};
-		},
-
-		clone: function() {
-			let newUser = Object.create(User);
-			newUser.init(this.user, this.pwd, this.roles);
-			return newUser;
-		},
-
-		mergeRoles: function(otherUser) {
-			let otherData = otherUser.out();
-			let newUser = this.clone();
-			otherData.roles.forEach(otherRole => {
-				if ( newUser.roles.findIndex( roleMatch(otherRole) ) === -1 ) {
-					newUser.roles.push(otherRole);
-				}
-			});
-			return newUser;
-		},
-
-		splitRoles: function(userRoles) {
-			let thisData = this.out();
-		},
-
-		nameEquals: function(otherUser) {
-			let otherData = otherUser.out();
-			return ("pwd" in otherData) && ("role" in otherData) && ( this.user == otherData.user );
-		}
-	};
-
-	Role = {
-		init: function(name, privileges, baseRoles) {
-			this.role = name;
-			this.roles = baseRoles.map(roleClone);
-			this.privileges = privileges.map(privilege => createPrivilege(privilege.resource, privilege.actions));
-			return this;
-		},
-
-		out: function() {
-			return {
-				role: this.role,
-				roles: this.roles,
-				privileges: this.privileges
-			};
-		}
-	};
-
-	let userAdmin = null;
-	let otherUsers = [];
-	let roles = {};
-
-	function addUserAdmin(user, password) {
-		userAdmin = Object.create(User).init(user, password, userAdminRoles);
-		return this;
-	}
-
-	function addUser(user, password, roles) {
-		if (userAdmin === null) {
-			if ( roles.findIndex( roleMatch(userAdminRole) ) != -1 ) {
-				userAdmin = Object.create(User).init(user, password, roles);
-			}
-			else {
-				throw Error ("userAdmin needs to be defined before additional admins can be added");
-			}
-		}
-		else {
-			let newUser = Object.create(User).init(user, password, roles);
-			if ( userAdmin.nameEquals(newUser) ) {
-				userAdmin = userAdmin.mergeRoles(newUser);
-			}
-			else {
-				let i = otherUsers.findIndex( userMatch(newUser) );
-				if ( i === -1 ) {
-					otherUsers.push(newUser);
+	roleMatch: (
+		testRole => (
+			x => {
+				if ( (typeof testRole === "object") && ("role" in testRole) ) {
+					return (typeof x === "object") && ("role" in x) && (x.role == testRole.role) && (x.db == testRole.db);
 				}
 				else {
-					let existingUser = otherUsers[i];
-					otherUsers[i] = existingUser.mergeRoles(newUser);
+					return (x == testRole);
 				}
 			}
-		}
-		return this;
+		)
+	),
+
+	userMatch: (
+		testUser => (
+			x => x.nameEquals(testUser)
+		)
+	)
+};
+
+const User = (function() {
+
+	// Instance methods
+	function clone() {
+		return User.create(this.user, this.pwd, this.roles);
 	}
 
-	function addRole(name, privileges = [], baseRoles = []) {
-		roles[name] = Object.create(Role).init(name, privileges, baseRoles);
+	function mergeRoles(otherUser) {
+		let otherData = otherUser.out();
+		otherData.roles.forEach(otherRole => {
+			if ( this.roles.findIndex( UserUtilities.roleMatch(otherRole) ) === -1 ) {
+				this.roles.push(otherRole);
+			}
+		});
 	}
 
-	function createPrivilege(resource, actions) {
+	function nameEquals(user) {
+		return User.isPrototypeOf(user) && (user.user == this.user);
+	}
+
+	function out() {
 		return {
-			resource: Object.assign({}, resource),
-			actions: Array.from(actions)
+			user: this.user,
+			pwd: this.pwd,
+			roles: this.roles.map(UserUtilities.roleClone)
 		};
 	}
+
+	function toString() {
+		return JSON.stringify(this.out());
+	}
+
+	const instanceMethods = {
+		clone: clone,
+		mergeRoles: mergeRoles,
+		nameEquals: nameEquals,
+		out: out,
+		toString: toString
+	};
+
+	// Static methods
+	function create(user, pwd, roles) {
+		let userObj = Object.create(instanceMethods);
+		userObj.user = user;
+		userObj.pwd = pwd;
+		userObj.roles = roles.map(UserUtilities.roleClone);
+		return userObj;
+	};
+
+	return {
+		create: create
+	};
+
+})();
+
+const UserList = (function() {
+
+	// Private method
+	function _addToList(list, user) {
+		let mergedUser = list.find( UserUtilities.userMatch(user) );
+		if (mergedUser == null) {
+			list.push(user);
+		}
+		else {
+			mergedUser.mergeRoles(user);
+		}
+	}
+
+	// Instance methods
+	function addUser(user) {
+		if (user == null) {
+			throw new Error("Cannot add a null user");
+		}
+		if (this.userAdmin != null && this.userAdmin.nameEquals(user)) {
+			this.userAdmin.mergeRoles(user);
+		}
+		else {
+			_addToList(this.users, user);
+		}
+	}
+
+	function cleanList(rolesManager) {
+		let adminRoles = rolesManager.splitUserByRoles(this.userAdmin);
+		if ("userDefinedRoles" in adminRoles) {
+			this.setUserAdmin(adminRoles.predefinedRoles);
+			_addToList(this.users, adminRoles.userDefinedRoles);
+		}
+	}
+
+	function getUserAdmin() {
+		return this.userAdmin && this.userAdmin.clone();
+	}
+
+	function getUsers() {
+		return this.users.map(user => user.clone());
+	}
+
+	function setUserAdmin(userAdmin) {
+		let roles = userAdmin.out().roles;
+		let isAdmin = UserUtilities.userAdminRoles.reduce(
+			(
+				(acc, testRole) => acc && roles.findIndex( roleMatch(testRole) ) != -1
+			),
+			true
+		);
+		if (!isAdmin) {
+			throw new Error(userAdmin + " is not a user admin");
+		}
+		this.userAdmin = userAdmin;
+	}
+
+	const instanceMethods = {
+		addUser: addUser,
+		cleanList: cleanList,
+		getUserAdmin: getUserAdmin,
+		getUsers: getUsers,
+		setUserAdmin: setUserAdmin
+	};
+
+	// static methods
+	function create() {
+		let userListObj = Object.create(instanceMethods);
+		userListObj.userAdmins = null;
+		userListObj.users = [];
+		return userListObj;
+	}
+
+	return {
+		create: create
+	};
+
+})();
+
+const Privilege = (function() {
+
+	// instance methods
+	function clone() {
+		return Privilege.create(this.resource, this.actions);
+	}
+
+	function out() {
+		return {
+			resource: Object.assign({}, this.resource),
+			actions: Array.from(this.actions);
+		}
+	}
+
+	const instanceMethods = {
+		clone: clone,
+		out: out
+	};
+
+	// static methods
+	function create(resource, actions) {
+		let privilegeObj = Object.create(instanceMethods);
+		privilegeObj.resource = Object.assign({}, resource);
+		privilegeObj.actions = Array.from(actions);
+		return privilegeObj;
+	}
+})();
+
+const UserRole = (function() {
+
+	// instance methods
+	function out() {
+		return {
+			role: this.role,
+			roles: this.roles.map(UserUtilities.roleClone),
+			privileges: this.privileges.map(privilege => privilege.out())
+		}
+	}
+
+	const instanceMethods = {
+		out: out
+	};
+
+	// static methods
+	function create(role, privileges, roles) {
+		let userRoleObj = Object.create(instanceMethods);
+		userRoleObj.role = role;
+		userRoleObj.privileges = privileges.map(privilege => privilege.clone());
+		userRoleObj.roles = roles.map(UserUtilities.roleClone);
+		return userRoleObj;
+	})
+
+	return {
+		create: create
+	};
+
+})();
+
+// static singleton
+const RoleManager = (function() {
+
+	const roles = {};
+
+	// static methods
+	function addUserRole(role, privileges, roles) {
+		roles[role] = Object.create(UserRole).init(role, privileges, roles);
+	}
+
+	function splitUserByRoles(user) {
+		const userRoleSplitter = (acc, testRole) => {
+			let isUserRole = false;
+
+			if (typeof testRole === "object") {
+				isUserRole = ( ("role" in testRole) && (testRole.role in roles) );
+			}
+			else {
+				isUserRole = (testRole in roles);
+			}
+
+			acc[isUserRole ? "userDefinedRoles" : "predefinedRoles"].push(testRole);
+
+			return acc;
+		};
+
+		let userData = user.out();
+		let userRoles = userData.roles.reduce(userRoleSplitter, { userDefinedRoles: [], predefinedRoles: [] });
+		let splitUser = {};
+		if (userRoles.userDefinedRoles.length) {
+			splitUser.userDefined = Object.create(User).init(userData.user, userData.pwd, userRoles.userDefinedRoles);
+		}
+		if (userRoles.predefinedRoles.length) {
+			splitUser.predefined = Object.create(User).init(userData.user, userData.pwd, userRoles.predefinedRoles);
+		}
+		return splitUser;
+	}
+
+	function loadRoles(db, roles) {
+		Object.keys(roles).forEach(name => {
+			let roleData = roles[name].out();
+			try {
+				db.createRole( roleData );
+			}
+			catch (e) {
+				if (roleData.privileges.length) {
+					db.grantPrivilegesToRole(name, roleData.privileges);
+				}
+				if (roleData.roles.length) {
+					db.grantRolesToRole(name, roleData.roles);
+				}
+			}
+		} );
+	}
+
+	return {
+		addUserRole: addUserRole,
+		splitUserByRoles: splitUserByRoles,
+		loadRoles: loadRoles
+	};
+
+})();
+
+// static singleton
+const UserManager = (function() {
+
+})();
+
+const UserLoader = (function() {
+
 
 	function load() {
 		const mongo = new Mongo();
@@ -239,23 +379,6 @@ const UserLoader = (function() {
 				throw Error("Could not authenticate " + adminData.user);
 			}
 		}
-	}
-
-	function loadRoles(db, roles) {
-		Object.keys(roles).forEach(name => {
-			let roleData = roles[name].out();
-			try {
-				db.createRole( roleData );
-			}
-			catch (e) {
-				if (roleData.privileges.length) {
-					db.grantPrivilegesToRole(name, roleData.privileges);
-				}
-				if (roleData.roles.length) {
-					db.grantRolesToRole(name, roleData.roles);
-				}
-			}
-		} );
 	}
 
 	function addOrUpdateUser(db, user, addOnly) { // throws error if unsuccessful
