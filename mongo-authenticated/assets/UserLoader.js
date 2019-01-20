@@ -43,7 +43,11 @@ const User = (function() {
 	}
 
 	function nameEquals(user) {
-		return User.isPrototypeOf(user) && (user.user == this.user);
+		if ( (user == null) || !("out" in user) || (typeof user.out !== "function") ) {
+			return false;
+		}
+		let userData = user.out();
+		return userData.user == this.user;
 	}
 
 	function out() {
