@@ -1,42 +1,32 @@
-const UserUtilities = {
-	userAdminRoles:
-		["userAdmin", "userAdminAnyDatabase", "hostManager"],
+/*
+ *	Since I don't have access to ES6 modules, I use global objects built via
+ *	IIFE. Methods are encapsulate within the closure. Instance methods are
+ *	collected into an object used by the singleton's create() method via
+ *	Object.create(). Static methods are returned at the end of the function.
+ *	All others are private.
+ *
+ *	Since I don't intend to do a full JS dev lifecyle on MongoDB scripts, and
+ *	since MongoDB 4.x is running SpiderMonkey 45 and doesn't support modules,
+ *	I'm not attempting to do any specific dependency work. I am highlighting
+ *	dependencies by supplying each global IIFE with parameters identifying the
+ *	other IIFE's they depend upon. This doesn't necessarily help bring together
+ *	the dependencies, but at least it draws some attention to them.
+ *
+ *	It smells. Sigh.
+ */
 
-	roleClone: (
-		x => (typeof x === "object") && ("role" in x) ? {role: x.role, db: x.db} : x
-	),
-
-	roleMatch: (
-		testRole => (
-			x => {
-				if ( (typeof testRole === "object") && ("role" in testRole) ) {
-					return (typeof x === "object") && ("role" in x) && (x.role == testRole.role) && (x.db == testRole.db);
-				}
-				else {
-					return (x == testRole);
-				}
-			}
-		)
-	),
-
-	userMatch: (
-		testUser => (
-			x => x.nameEquals(testUser)
-		)
-	)
-};
-
+/*
+ *
+ *	Container for user information.
+ *
+ */
 const User = (function() {
 
 	// Instance methods
-	function clone() {
-		return User.create(this.user, this.pwd, this.roles);
-	}
-
 	function mergeRoles(otherUser) {
-		let otherData = otherUser.out();
+		const otherData = otherUser.out();
 		otherData.roles.forEach(otherRole => {
-			if ( this.roles.findIndex( UserUtilities.roleMatch(otherRole) ) === -1 ) {
+			if ( this.roles.findIndex( roleMatch ) === -1 ) {
 				this.roles.push(otherRole);
 			}
 		});
@@ -46,7 +36,7 @@ const User = (function() {
 		if ( (user == null) || !("out" in user) || (typeof user.out !== "function") ) {
 			return false;
 		}
-		let userData = user.out();
+		const userData = user.out();
 		return userData.user == this.user;
 	}
 
@@ -54,7 +44,7 @@ const User = (function() {
 		return {
 			user: this.user,
 			pwd: this.pwd,
-			roles: this.roles.map(UserUtilities.roleClone)
+			roles: this.roles.map(roleDescriptorClone)
 		};
 	}
 
@@ -63,7 +53,6 @@ const User = (function() {
 	}
 
 	const instanceMethods = {
-		clone: clone,
 		mergeRoles: mergeRoles,
 		nameEquals: nameEquals,
 		out: out,
@@ -72,24 +61,69 @@ const User = (function() {
 
 	// Static methods
 	function create(user, pwd, roles) {
-		let userObj = Object.create(instanceMethods);
+		const userObj = Object.create(instanceMethods);
 		userObj.user = user;
 		userObj.pwd = pwd;
-		userObj.roles = roles.map(UserUtilities.roleClone);
+		userObj.roles = roles.map(roleDescriptorClone);
 		return userObj;
 	};
 
+	function createUserAdmin(user, pwd) {
+		return create(user, pwd, userAdminRoles);
+	}
+
+	const roleMatch = testRole => x => {
+		if ( (typeof testRole === "object") && ("role" in testRole) ) {
+			return (typeof x === "object") && ("role" in x) && (x.role == testRole.role) && (x.db == testRole.db);
+		}
+		else {
+			return (x == testRole);
+		}
+	};
+
+	const roleDescriptorClone = x => (typeof x === "object") && ("role" in x) ? {role: x.role, db: x.db} : x;
+
+	const userAdminRoles = ["userAdmin", "userAdminAnyDatabase", "hostManager"];
+
 	return {
-		create: create
+		create: create,
+		createAdmin: createAdmin,
+		roleDescriptorClone: roleDescriptorClone,
+		roleMatch: roleMatch,
+		userAdminRoles: userAdminRoles
 	};
 
 })();
 
-const UserList = (function() {
+/*
+ *
+ *	A list of users to be added to the database. A separate user admin is
+ *	identified to permit creation of a user authorized to define other users.
+ *
+ *	As each user is added to this list, it is compared against previously
+ *	added users. If a user with the same name is already present, instead of
+ *	creating a duplicate user, UserList will update the existing user with any
+ *	additional roles provided by the newly introduced user data. This ensures
+ *	that the password provided by the first instance is retained.
+ *
+ *	User-defined database roles are applied after authentication by the user
+ *	admin. This means that defining a user admin with user-defined roles will
+ *	cause the creation of the user admin to fail and abort the entire process.
+ *
+ *	Before attempting to use this list with any of the methods on UserLoader,
+ *	run cleanList(roleManager) first. This will split the user admin User into
+ *	a clean pre-authentication User and a User containing user-defined roles.
+ *	This second User would update the admin after the roles have been defined.
+ *
+ */
+const UserList = (function(User) {
 
-	// Private method
+	// Private static method
 	function _addToList(list, user) {
-		let mergedUser = list.find( UserUtilities.userMatch(user) );
+		const userFinderBuilder = testUser => x => x.nameEquals(testUser);
+		const userFinder = userFinderBuilder(user);
+
+		const mergedUser = list.find(userFinder);
 		if (mergedUser == null) {
 			list.push(user);
 		}
@@ -111,27 +145,30 @@ const UserList = (function() {
 		}
 	}
 
-	function cleanList(rolesManager) {
-		let adminRoles = rolesManager.splitUserByRoles(this.userAdmin);
-		if ("userDefinedRoles" in adminRoles) {
-			this.setUserAdmin(adminRoles.predefinedRoles);
-			_addToList(this.users, adminRoles.userDefinedRoles);
+	function cleanList(roleManager) {
+		const userAdminData = this.userAmin.out();
+		const adminRoles = roleManager.splitRoles(userAdminData.roles);
+		if (adminRoles.userDefinedRoles.length) {
+			const cleanAdminUser = User.create(userAdminData.user, userAdminData.pwd, adminRoles.predefinedRoles);
+			const roledAdminUser = User.create(userAdminData.user, userAdminData.pwd, adminRoles.userDefinedRoles);
+			this.setUserAdmin(cleanAdminUser);
+			_addToList(this.users, roledAdminUser);
 		}
 	}
 
-	function getUserAdmin() {
-		return this.userAdmin && this.userAdmin.clone();
+	function getUserAdminData() {
+		return this.userAdmin && this.userAdmin.out();
 	}
 
-	function getUsers() {
-		return this.users.map(user => user.clone());
+	function getUserData() {
+		return this.users.map(user => user.out());
 	}
 
 	function setUserAdmin(userAdmin) {
-		let roles = userAdmin.out().roles;
-		let isAdmin = UserUtilities.userAdminRoles.reduce(
+		const roles = userAdmin.out().roles;
+		const isAdmin = User.userAdminRoles.reduce(
 			(
-				(acc, testRole) => acc && roles.findIndex( roleMatch(testRole) ) != -1
+				(acc, testRole) => acc && roles.findIndex( User.roleMatch(testRole) ) != -1
 			),
 			true
 		);
@@ -144,8 +181,8 @@ const UserList = (function() {
 	const instanceMethods = {
 		addUser: addUser,
 		cleanList: cleanList,
-		getUserAdmin: getUserAdmin,
-		getUsers: getUsers,
+		getUserAdminData: getUserAdminData,
+		getUserData: getUserData,
 		setUserAdmin: setUserAdmin
 	};
 
@@ -161,8 +198,19 @@ const UserList = (function() {
 		create: create
 	};
 
-})();
+})(User);
 
+/*
+ *	Defines a resource and the actions permitted on it. I created this as a
+ *	separate object because otherwise the "privileges" member in role creation
+ *	gets really ugly with all of the nested arrays and objects. privilege.out()
+ *	is much prettier than
+ *
+ *	{ resource: {db: "x", collection: "y"}, actions: ["a", "b", "c"] }
+ *
+ *	especially when there is an array of these.
+ *
+ */
 const Privilege = (function() {
 
 	// instance methods
@@ -189,15 +237,25 @@ const Privilege = (function() {
 		privilegeObj.actions = Array.from(actions);
 		return privilegeObj;
 	}
+
+	return {
+		create: create
+	};
+
 })();
 
-const UserRole = (function() {
+/*
+ *	Identifies user-defined roles. When added to RoleManager, each UserRole
+ *	is added to the database prior to adding other users.
+ *
+ */
+const UserRole = (function(User) {
 
 	// instance methods
 	function out() {
 		return {
 			role: this.role,
-			roles: this.roles.map(UserUtilities.roleClone),
+			roles: this.roles.map(User.roleDescriptorClone),
 			privileges: this.privileges.map(privilege => privilege.out())
 		}
 	}
@@ -207,11 +265,11 @@ const UserRole = (function() {
 	};
 
 	// static methods
-	function create(role, privileges, roles) {
+	function create(role, privileges = [], roles = []) {
 		let userRoleObj = Object.create(instanceMethods);
 		userRoleObj.role = role;
 		userRoleObj.privileges = privileges.map(privilege => privilege.clone());
-		userRoleObj.roles = roles.map(UserUtilities.roleClone);
+		userRoleObj.roles = roles.map(User.roleDescriptorClone);
 		return userRoleObj;
 	})
 
@@ -219,224 +277,210 @@ const UserRole = (function() {
 		create: create
 	};
 
-})();
+})(User);
 
-// static singleton
+/*
+ *	A Singleton for loading user-defined roles into the database. Also provides
+ *	a utility for separating user-defined roles from predefined ones.
+ *
+ */
 const RoleManager = (function() {
 
-	const roles = {};
+	const userRoles = {};
 
 	// static methods
-	function addUserRole(role, privileges, roles) {
-		roles[role] = Object.create(UserRole).init(role, privileges, roles);
+	function addUserRole(name, userRole) {
+		userRoles[name] = userRole;
 	}
 
-	function splitUserByRoles(user) {
-		const userRoleSplitter = (acc, testRole) => {
+	function splitRoles(mixedRoles) {
+		const userRoleSplitterBuilder = roles => (acc, mixedRole) => {
 			let isUserRole = false;
-
-			if (typeof testRole === "object") {
-				isUserRole = ( ("role" in testRole) && (testRole.role in roles) );
+			if (typeof mixedRole === "object") {
+				isUserRole = ( ("role" in mixedRole) && (mixedRole.role in roles) );
 			}
 			else {
-				isUserRole = (testRole in roles);
+				isUserRole = (mixedRole in roles);
 			}
-
-			acc[isUserRole ? "userDefinedRoles" : "predefinedRoles"].push(testRole);
-
+			acc[isUserRole ? "userDefinedRoles" : "predefinedRoles"].push(mixedRole);
 			return acc;
 		};
 
-		let userData = user.out();
-		let userRoles = userData.roles.reduce(userRoleSplitter, { userDefinedRoles: [], predefinedRoles: [] });
-		let splitUser = {};
-		if (userRoles.userDefinedRoles.length) {
-			splitUser.userDefined = Object.create(User).init(userData.user, userData.pwd, userRoles.userDefinedRoles);
-		}
-		if (userRoles.predefinedRoles.length) {
-			splitUser.predefined = Object.create(User).init(userData.user, userData.pwd, userRoles.predefinedRoles);
-		}
-		return splitUser;
+		const userRoleSplitter = userRoleSplitterBuilder(userRoles);
+		return mixedRoles.reduce(userRoleSplitter, { userDefinedRoles: [], predefinedRoles: [] });
 	}
 
-	function loadRoles(db, roles) {
-		Object.keys(roles).forEach(name => {
-			let roleData = roles[name].out();
+	function loadRoles(db) {
+
+		const roleLoaderBuilder = db => roles => (name, errors) => {
+			const roleData = roles[name].out();
 			try {
-				db.createRole( roleData );
+				db.createRole(roleData);
 			}
 			catch (e) {
-				if (roleData.privileges.length) {
-					db.grantPrivilegesToRole(name, roleData.privileges);
+				try {
+					if (roleData.privileges.length) {
+						db.grantPrivilegesToRole(name, roleData.privileges);
+					}
+					if (roleData.roles.length) {
+						db.grantRolesToRole(name, roleData.roles);
+					}
 				}
-				if (roleData.roles.length) {
-					db.grantRolesToRole(name, roleData.roles);
+				catch (f) {
+					errors.push(name + ": " + f.message);
 				}
 			}
-		} );
+			return errors
+		};
+
+		const roleLoader = roleLoaderBuilder(db)(userRoles);
+		return Object.keys(roles).reduce(roleLoader, []);
 	}
 
 	return {
 		addUserRole: addUserRole,
-		splitUserByRoles: splitUserByRoles,
+		splitRoles: splitRoles,
 		loadRoles: loadRoles
 	};
 
 })();
 
-// static singleton
-const UserManager = (function() {
+/*
+ *
+ *	Defines database-centric utilities.
+ *
+ */
+const DatabaseManager = (function() {
 
-})();
-
-const UserLoader = (function() {
-
-
-	function load() {
-		const mongo = new Mongo();
-		const db = mongo.getDB("admin");
-
-		let errors = [];
-
-		try {
-			let userAdmins = splitAdminByRoles(userAdmin);
-			if (! ("predefinedRoles" in userAdmins) ) {
-				throw new Error("User admin has no predefined roles and can't be used for authentication. Roles are: " + JSON.stringify(userAdmin.out().roles));
-			}
-			intializeAdminAndAuthenticate(db, userAdmins.predefinedRoles); // if this throws, bypass additional users and report error
-			print("Authenticated with user " + userAdmin.out().user);
-			loadRoles(db, roles);
-			if ("userRoles" in userAdmins) {
-				try {
-					addOrUpdateUser(db, userAdmins.userRoles, false); // if this throws, collect error for this specific user and continue
-					print("Updated user " + userAdmins.userRules.out().user);
-				}
-				catch (e) {
-					errors.push(userAdmins.userRules.out().user + ": " + e.message);
-				}
-			}
-			otherUsers.forEach(
-				user => {
-					if ( !user.isDeployed() ) {
-						try {
-							addOrUpdateUser(db, user); // if this throws, collect error for this specific user and continue
-							print("Added/updated user " + user.out().user);
-						}
-						catch (e) {
-							errors.push(user.out().user + ": " + e.message);
-						}
-					}
-				} 
-			);
-		}
-		catch (e) {
-			errors.push(userAdmin.out().user + " couldn't authenticate: " + e.message);
-		}
-
-		if (errors.length) {
-			print("The following errors occurred while authenticating or adding users:");
-			errors.forEach(message => print("> " + message));
-		}
+	function authenticate(db, {user, pwd}) {
+		return db.authenticate(user, pwd);
 	}
 
-	function splitAdminByRoles(admin) {
-		let adminData = admin.out();
-		adminRoles = adminData.roles.reduce(userRoleSplitter, { userRoles: [], predefinedRoles: [] });
-		let splitAdmins = {};
-		if (adminRoles.userRoles.length) {
-			splitAdmins.userRoles = Object.create(User).init(adminData.user, adminData.pwd, adminRoles.userRoles);
-		}
-		if (adminRoles.predefinedRoles.length) {
-			splitAdmins.predefinedRoles = Object.create(User).init(adminData.user, adminData.pwd, adminRoles.predefinedRoles);
-		}
-		return splitAdmins;
-	}
-
-	function intializeAdminAndAuthenticate(db, admin) { // throws error if unsuccessful
-		let adminData = admin.out();
-		let tryUpdate = false;
-		let error = null;
-
-		if ( !admin.isDeployed() ) {
-			try {
-				addOrUpdateUser(db, admin, true);
-			}
-			catch (e) { // suspend throw until we know we can't authenticate and update the admin
-				error = e;
-				tryUpdate = true;
-			}
-		}
-
-		if ( db.auth(adminData.user, adminData.pwd) ) {
-			if (tryUpdate) {
-				addOrUpdateUser(db, admin, false); // if we can't update, either, this error should be thrown
-				if ( !db.auth(adminData.user, adminData.pwd) ) {
-					throw Error("Could not authenticate " + adminData.user);
-				}
-			}
-		}
-		else {
-			if (error !== null) { // we couldn't add or authenticate
-				throw e;
-			}
-			else { // we couldn't authenticate
-				throw Error("Could not authenticate " + adminData.user);
-			}
-		}
-	}
-
-	function addOrUpdateUser(db, user, addOnly) { // throws error if unsuccessful
-		let userData = user.out();
-
-		let tryBoth = arguments.length == 2;
-		let tryAdd = tryBoth || addOnly == true;
-		let tryUpdate = tryBoth || !addOnly;
-		let error = null;
-
-		if (tryAdd) {
-			try {
-				db.createUser(userData);
-				user.setDeployed(true);
-				return true;
-			}
-			catch (e) {
-				if (!tryUpdate) {
-					throw e;
-				}
-				else {
-					error = e;
-				}
-			}
-		}
-
-		if (tryUpdate) {
-			try {
-				db.updateUser(
-					userData.user,
-					{
-						pwd: userData.pwd,
-						roles: userData.roles
-					}
-				);
-				user.setDeployed(true);
-				return true;
-			}
-			catch (e) {
-				if (error !== null) { // If both add and update fail, report add error as initial problem.
-					throw error;
-				}
-				else {
-					throw e;
-				}
-			}
-		}
+	function connect() {
+		return (new Mongo()).getDB("admin");
 	}
 
 	return {
-		addUserAdmin: addUserAdmin,
-		addUser: addUser,
-		addRole: addRole,
-		createPrivilege: createPrivilege,
-		load: load
+		authenticate: authenticate,
+		connect: connect
 	};
+
+})();
+
+/*
+ *
+ *	Loads users into the database. Provides methods for creating and
+ *	authenticating an admin to create other users, for adding or updating
+ *	individual users, and for adding an array of user data.
+ *
+ *	If authenticating before creating roles, ensure that the provided admin
+ *	is stripped of user-defined roles, or the admin will not be created and
+ *	authentication will not take place. User data can be cleaned using the
+ *	cleanList() method found on UserList.
+ *
+ *	UserLoader exposes many of its basic functions for use in other situations,
+ *	such as administering an existing database versus building up a new one.
+ *
+ *	For most startup situations, load() will call these functions as you would
+ *	expect: cleaning the user data list, adding the initial user admin,
+ *	authenticating, loading roles, then loading all other users in the user
+ *	list.
+ *
+ *	Load takes the other managers as method arguments to permit extension.
+ *
+ */
+const UserLoader = (function() {
+
+	function addUser(db, {user, pwd, roles}, tryUpdate = false) { // throws if user couldn't be added, or couldn't be added or updated if tryUpdate == true
+		try {
+			db.createUser( {user, pwd, roles} );
+			return true;
+		}
+		catch (e) {
+			if (tryUpdate) {
+				db.updateUser( user, {pwd, roles} );
+				return false;
+			}
+			else {
+				throw e;
+			}
+		}
+	}
+
+	function load(dbManager, roleManager, userManager, userList) {
+
+		function reportOnArray(func, message) {
+			const results = func();
+			if (results.length) {
+				print(message + ":");
+				results.forEach(e => print(e) );
+			}
+		}
+
+		const db = dbManager.connect();
+
+		const loadRoles = () => roleManager.loadRoles(db);
+		const loadUsers = () => userManager.loadUsers(db, userList.getUserData() );
+
+		try {
+			userList.cleanList(roleManager);
+			const authenticated = loadUserAdminAndAuthenticate(dbManager, db, userList.getUserAdminData() );
+			if (authenticated) {
+				reportOnArray(loadRoles, "The following roles could not be added/updated");
+				reportOnArray(loadUsers, "The following users could not be added/updated");
+			}
+		}
+		catch (e) {
+			print("Error prevented users and roles from being added/updated properly:");
+			print(e.message);
+		}
+	}
+
+	// Note that userList.cleanList() should be called on the list the admin data comes from, prior to running this.
+	function loadUserAdminAndAuthenticate(db, {user, pwd, roles} ) {
+		try {
+			addUser(db, {user, pwd, roles} );
+			return dbManager.authenticate(db, {user, pwd} );
+		}
+		catch (e) {
+			const result = dbManager.authenticate(db, {user, pwd} );
+			if (result) {
+				updateUser(db, {user, pwd, roles} );
+				return result;
+			}
+			else {
+				throw e;
+			}
+		}
+	}
+
+	// Note that userList.cleanList() should be called on the list userDataArray comes from, prior to running this.
+	function loadUsers(db, userDataArray) {
+		const userLoaderBuilder = db => ({user, pwd, roles}, errors) => {
+			try {
+				updateUser(db, {user, pwd, roles} ); // if this throws, collect error for this specific user and continue
+			}
+			catch (e) {
+				errors.push(user + ": " + e.message);
+			}
+			return errors;
+		};
+
+		const userLoader = userLoaderBuilder(db);
+
+		return userDataArray.reduce(userLoader, []);
+	}
+
+	function updateUser(db, {user, pwd, roles} ) { // throws if user couldn't be added or updated
+		return addUser(db, {user, pwd, roles}, true);
+	}
+
+	return {
+		addUser: addUser,
+		load: load,
+		loadUserAdminAndAuthenticate: loadUserAdminAndAuthenticate,
+		loadUsers: loadUsers,
+		updateUser: updateUser
+	};
+
 })();
