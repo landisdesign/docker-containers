@@ -8,11 +8,11 @@ rm ./mongo_cluster.sh
 # NOTE: anyAction is added to existing backup admin to permit replay of oplog in clusters
 cat >> /mongo-admins.js <<EOF
 // added from mongo-authenticated-cluster
-let anyActionPrivilege = UserLoader.createPrivilege({anyResource: true}, ["anyAction"]);
-UserLoader.addRole("anyAction", [anyActionPrivilege]);
+const anyActionPrivilege = UserDefinedRoleFunctions.privilege({anyResource: true}, ["anyAction"]);
+roles.push( UserDefinedRoleFunctions.role("anyAction", [anyActionPrivilege], []) );
 
-UserLoader.addUser("${mongo_cluster_admin_name}", "${mongo_cluster_admin_pwd}", ["clusterAdmin"]);
-UserLoader.addUser("${mongo_backup_admin_name}", "${mongo_backup_admin_pwd}", ["anyAction"]);
+users.push( UserFunctions.create("${mongo_cluster_admin_name}", "${mongo_cluster_admin_pwd}", ["clusterAdmin"]) );
+users.push( UserFunctions.create("${mongo_backup_admin_name}", "${mongo_backup_admin_pwd}", ["anyAction"]) );
 
 EOF
 
