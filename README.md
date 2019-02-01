@@ -1,4 +1,4 @@
-##Docker Containers for Self-Standing Notes App
+## Docker Containers for Self-Standing Notes App
 
 This repository holds the containers I've created as a test for me to learn Git, Docker, MongoDB, shell scripting, and generally the Ops side of DevOps.
 
@@ -10,22 +10,22 @@ I chose to use MongoDB due to its usability in Adobe Experience Manager. Althoug
 
 The containers are as follows:
 
-###[`java-alpine`](java-alpine/)
+### [`java-alpine`](java-alpine/)
 This was an attempt to make as small a jdk-12 container as possible, for use by Tomcat.
 
-###[`mongo-authenticated`](mongo-authenticated/)
+### [`mongo-authenticated`](mongo-authenticated/)
 This is the root of my attempts to create a self-starting MongoDB instance. All other `mongo-authenticated-*` images build off of this one.
 
-###[`mongo-authenticated-backup`](mongo-authenticated-backup/)
+### [`mongo-authenticated-backup`](mongo-authenticated-backup/)
 This is used as part of an automated backup process using mongodump and the `backup-mondo.sh` script found in my DevOps repository.
 
-###[`mongo-authenticated-cluster`](mongo-authenticated-cluster/)
+### [`mongo-authenticated-cluster`](mongo-authenticated-cluster/)
 This stands up a MongoDB replicated cluster and automatically pulls files from the backup reated by `mongo-authenticated-backup`.
 
-###[`mongo-cluster`](mongo-cluster/)
+### [`mongo-cluster`](mongo-cluster/)
 This was my original attempt at clustering, based upon [this article](http://www.tothenew.com/blog/mongodb-replica-set-using-docker-networking-and-docker-compose/). I didn't like how it required defining a specific primary, because that prevents us from simply duplicating configs across the swarm and letting the instances sort themselves out.
 
-###[`tomcat-alpine`](tomcat-alpine/)
+### [`tomcat-alpine`](tomcat-alpine/)
 Although there is already a formal tomcat image out there, I wanted to create my own after considering how there are companies who would want to bake their own instead of relying on a third party.
 
 Currently the repository includes some basic Jest configuration, to allow for unit testing the JavaScript used by MongoDB to create its users and provide cluster information.
