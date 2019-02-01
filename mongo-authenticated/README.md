@@ -26,7 +26,7 @@ Because the image has no data on it, it has no authentication credentials. Becau
 
 * A **backup administrator** is responsible for performing backups and restorations. Separating this responsibility out allows for automation of this functionality without exposing other admin functions.
 
-These roles can be combined by identfying one or more belonging to the same user id.
+These roles can be combined by identifying one or more belonging to the same user id.
 
 ## Environment variables
 
@@ -75,6 +75,6 @@ This shell script file is executed after `mongod` is started and the users are d
 
 Because the Mongo shell uses JavaScript to run its commands, the user creation process is performed primarily using JavaScript. This gave me an opportunity to dive into functional programming techniques, since those weren't really in vogue at my former job.
 
-The files for creating users, roles, and database access are found in [`assets/modules`](assets/modules). The primary relationships are between `UserFunctions.js` and `DatabaseFunctions.js`. `RoleDescriptorFunctions.js` is used to help merge and role descriptions in users. `UserDefinedRoleFunctions.js` help for that specific use case. `HelperFunctions,js` is a collection of higher-order functions and transducers.
+The files for creating users, roles, and database access are found in [`assets/modules`](assets/modules). The primary relationships are between `UserFunctions.js` and `DatabaseFunctions.js`. `RoleDescriptorFunctions.js` is used to help merge and split role descriptions in users. `UserDefinedRoleFunctions.js` help for that specific use case. `HelperFunctions.js` is a collection of higher-order functions and transducers.
 
-These files are then used by the files in [`assets/scripts`](assets/scripts). `build_mongo-admins.sh` reads the secrets to create a credentials file `mongo-admins.js`. `mongo-startup.js` loads the modules, loads `mongo-admins.js` and `mongo-users.js` and runs them into the database.
+These files are then used by the files in [`assets/scripts`](assets/scripts). `build_mongo-admins.sh` reads the secrets to create a credentials file `mongo-admins.js`. `mongo-startup.js` loads the modules, loads `mongo-admins.js` and `mongo-users.js`, then runs them into the database.
