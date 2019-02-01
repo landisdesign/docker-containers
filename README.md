@@ -1,4 +1,4 @@
-## Docker Containers for Self-Standing Notes App
+# Docker Containers for Self-Standing Notes App
 
 This repository holds the containers I've created as a test for me to learn Git, Docker, MongoDB, shell scripting, and generally the Ops side of DevOps.
 
