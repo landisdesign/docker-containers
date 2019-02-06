@@ -1,7 +1,4 @@
-cp /run/secrets/mongo ./mongo.sh
-chmod 700 ./mongo.sh
-. ./mongo.sh
-rm ./mongo.sh
+./load_secrets "mongo_backup_*"
 
 default_port=27017
 host_url=$(echo "${MONGO_HOSTS}" | sed "s/,/:${default_port},/g"):${default_port}

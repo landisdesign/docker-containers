@@ -1,7 +1,4 @@
-cp /run/secrets/mongo ./mongo.sh
-chmod 777 ./mongo.sh
-. ./mongo.sh
-rm ./mongo.sh
+. ./load_secrets.sh mongo_*
 
 cat > /mongo-admins.js <<EOF
 // added from mongo-authenticated

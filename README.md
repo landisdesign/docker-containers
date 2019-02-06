@@ -16,11 +16,11 @@ This was an attempt to make as small a jdk-12 container as possible, for use by 
 ### [`mongo-authenticated`](mongo-authenticated/)
 This is the root of my attempts to create a self-starting MongoDB instance. All other `mongo-authenticated-*` images build off of this one.
 
-### [`mongo-authenticated-backup`](mongo-authenticated-backup/)
-This is used as part of an automated backup process using mongodump and the `backup-mondo.sh` script found in my DevOps repository.
-
 ### [`mongo-authenticated-cluster`](mongo-authenticated-cluster/)
 This stands up a MongoDB replicated cluster and automatically pulls files from the backup reated by `mongo-authenticated-backup`.
+
+### [`mongo-authenticated-utilities`](mongo-authenticated-utilities/)
+This provides backup, restoration and password change utilities for a mongo cluster identified via labels in its Compose file. More details in the readme for this image.
 
 ### [`mongo-cluster`](mongo-cluster/)
 This was my original attempt at clustering, based upon [this article](http://www.tothenew.com/blog/mongodb-replica-set-using-docker-networking-and-docker-compose/). I didn't like how it required defining a specific primary, because that prevents us from simply duplicating configs across the swarm and letting the instances sort themselves out.

@@ -1,9 +1,6 @@
 . ./build_initial_mongo-admins.sh
 
-cp /run/secrets/mongo_cluster ./mongo_cluster.sh
-chmod 777 ./mongo_cluster.sh
-. ./mongo_cluster.sh
-rm ./mongo_cluster.sh
+. ./load_secrets.sh mongo_cluster_*
 
 # NOTE: anyAction is added to existing backup admin to permit replay of oplog in clusters
 cat >> /mongo-admins.js <<EOF
