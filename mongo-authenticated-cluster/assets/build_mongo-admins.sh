@@ -1,6 +1,6 @@
 . ./build_initial_mongo-admins.sh
 
-. ./load_secrets.sh mongo_cluster_*
+$( ./load_secrets.sh mongo_cluster_* )
 
 # NOTE: anyAction is added to existing backup admin to permit replay of oplog in clusters
 cat >> /mongo-admins.js <<EOF

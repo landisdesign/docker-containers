@@ -1,4 +1,4 @@
-./load_secrets "mongo_backup_*"
+eval "$( ./load_secrets.sh mongo_backup_* )"
 
 default_port=27017
 host_url=$(echo "${MONGO_HOSTS}" | sed "s/,/:${default_port},/g"):${default_port}
