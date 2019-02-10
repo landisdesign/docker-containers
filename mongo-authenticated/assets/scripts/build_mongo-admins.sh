@@ -1,4 +1,5 @@
-$( ./load_secrets.sh mongo_* )
+. ./secrets.sh
+load_secrets mongo_*
 
 cat > /mongo-admins.js <<EOF
 // added from mongo-authenticated
