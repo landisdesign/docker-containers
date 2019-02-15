@@ -61,8 +61,42 @@ test("getUserTypes returns array of types", () => {
 })
 
 describe("registerUserType", () => {
-	test.todo("Creating new type");
-	test.todo("Adding to existing type");
+
+	/* Makes up for not being able to guarantee the order of elements returned
+	   by for..in. We need to know that all of the same elements are present,
+	   regardless of order. */
+	expectArraysContainSameElements = (result, expected) => {
+		expect(result).toEqual( expect.arrayContaining(expected) );
+		expect(result).toHaveLength(expected.length);
+	};
+
+	test("Creating new type", () => {
+		const typeName = "testType";
+		const roles = ["a", {db:"b",role:"c"}];
+		const expectedTypes = UserFunctions.getUserTypes().concat(typeName);
+
+		UserFunctions.registerUserType(typeName, roles);
+
+		const resultingTypes = UserFunctions.getUserTypes();
+		expectArraysContainSameElements(resultingTypes, expectedTypes);
+
+		const resultingUser = UserFunctions.createUserOfType("name", "pwd", typeName);
+
+		expect(resultingUser.roles).toEqual(roles);
+	});
+
+	test("Adding to existing type", () => {
+		const typeName = "testType";
+		const rolesA = ["a", {db:"b",role:"c"}];
+		const rolesB = ["d", {db:"b",role:"c"}, "e"];
+		const expectedRoles = ["a", {db:"b",role:"c"}, "d", "e"];
+
+		UserFunctions.registerUserType(typeName, rolesA);
+		UserFunctions.registerUserType(typeName, rolesB);
+
+		const resultingUser = UserFunctions.createUserOfType("name", "pwd", typeName);
+		expectArraysContainSameElements(resultingUser.roles, expectedRoles);
+	});
 });
 
 test("createAdmin creates User with admin roles", () => {
