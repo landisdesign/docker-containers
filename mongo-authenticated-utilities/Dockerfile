@@ -5,7 +5,7 @@ RUN apt-get update &&\
     apt-get autoremove &&\
     apt-get clean
 COPY --from=landisdesign/secrets-loader:1.0.1 secrets.sh /
-COPY ./*.sh /
+COPY ./assets/* /
 
 RUN chmod 700 *.sh
 

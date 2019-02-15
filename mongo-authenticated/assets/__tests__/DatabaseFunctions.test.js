@@ -1,6 +1,7 @@
-const Mongo = require("../modules/__mocks__/Mongo"); // Mongo is our mock object for retrieving our database mocks.
 const DatabaseFunctions = require("../modules/DatabaseFunctions");
 const HelperFunctions = require("../modules/HelperFunctions");
+const Mongo = require("../modules/__mocks__/Mongo"); // Mongo is our mock object for retrieving our database mocks.
+const MockDB = require("../../../__jest-helpers__/MockDB")(HelperFunctions);
 
 test("Database is retrieved", () => {
 	let testDB = {};
@@ -21,21 +22,8 @@ test("Database is retrieved", () => {
 	expect(outDb.name).toMatch(dbName);
 });
 
-const mockDBGenerator = methods => (db = {}) => Object.entries(methods).reduce((map, [key, value]) => {
-	const fn = jest.fn();
-	if (typeof value === "function") {
-		fn.mockImplementation(value);
-	}
-	map[key] = fn;
-	return map;
-}, db);
-
-const mockAuthDB = authenticates => mockDBGenerator({
-	auth: () => authenticates ? 1 : 0
-});
-
 test("Authentication properly attempted", () => {
-	const testDB = mockAuthDB(true)();
+	const testDB = MockDB.mockAuthDB(true)();
 	const testUser = {
 		user: "a",
 		pwd: "b",
@@ -53,85 +41,17 @@ test("Authentication properly attempted", () => {
 	expect(args).toEqual(outArgs);
 });
 
-const throwErrorImplementation = (message = "Error message", code = 1) => {
-	const fn = () => {
-		const error = new Error(message);
-		error.code = code;
-		throw error;
-	};
-	const error = ( () => {
-		try {
-			fn();
-		}
-		catch(e) {
-			return e;
-		}
-	} )();
-
-	return {
-		fn,
-		error,
-		message: HelperFunctions.errorMessage(error)
-	};
-};
-
-const throwDuplicateImplementation = throwErrorImplementation("Duplicate exists", 11000);
-
-const mockRoleDB = mockDBGenerator({
+const mockRoleDB = MockDB.mockDBGenerator({
 	createRole: true,
 	grantPrivilegesToRole: true,
 	grantRolesToRole: true
 });
 
-const mockDuplicateRoleDB = mockDBGenerator({
-	createRole: throwDuplicateImplementation.fn,
+const mockDuplicateRoleDB = MockDB.mockDBGenerator({
+	createRole: MockDB.throwDuplicateImplementation.fn,
 	grantPrivilegesToRole: true,
 	grantRolesToRole: true
 });
-
-// Placing the counter on implData lets us update it on each call of the create method.
-// The closure fixes the object reference but not its members.
-// We increment it on create because we can't guarantee the update method will be called.
-const mockDBForData = (db, createMethodName, updateMethodName) => implData => {
-	implData.index = -1;
-
-	db[createMethodName].mockImplementation( () => {
-		implData.index++;
-		const datum = implData[implData.index];
-		if (datum.isNew) {
-			if (datum.throwsError) {
-				throw datum.error;
-			}
-		}
-		else {
-			throwDuplicateImplementation.fn();
-		}
-	});
-
-	db[updateMethodName].mockImplementation( () => {
-		const datum = implData[implData.index];
-		if (datum.throwsError) {
-			throw datum.error;
-		}
-	});
-
-	return db;
-};
-
-const buildImplData = implData => implData.reduce(
-	(acc, datum) => {
-		const mappedDatum = Object.assign({}, datum);
-		if (mappedDatum.throwsError) {
-			const errorData = throwErrorImplementation("Errored out", acc.data.length);
-			delete errorData.fn;
-			Object.assign(mappedDatum, errorData);
-			acc.messages.push(mappedDatum.message);
-		}
-		acc.data.push(mappedDatum);
-		return acc;
-	},
-	{data: [], messages: []}
-);
 
 const testRoleData = (testRole = {}) => {
 	testRole = Object.assign({
@@ -235,7 +155,7 @@ describe("loadRole", () => {
 		const {role, privileges, roles} = testRole;
 
 		test("when creating new role", () => {
-			const errorData = throwErrorImplementation("Throws creating new", 1);
+			const errorData = MockDB.throwErrorImplementation("Throws creating new", 1);
 			const testDB = mockRoleDB();
 			testDB.createRole.mockImplementation( errorData.fn );
 
@@ -245,7 +165,7 @@ describe("loadRole", () => {
 		});
 
 		test("when adding privileges", () => {
-			const errorData = throwErrorImplementation("Throws adding privileges", 2);
+			const errorData = MockDB.throwErrorImplementation("Throws adding privileges", 2);
 			const testDB = mockDuplicateRoleDB();
 			testDB.grantPrivilegesToRole.mockImplementation( errorData.fn );
 
@@ -255,7 +175,7 @@ describe("loadRole", () => {
 		});
 
 		test("when adding roles", () => {
-			const errorData = throwErrorImplementation("Throws adding roles", 3);
+			const errorData = MockDB.throwErrorImplementation("Throws adding roles", 3);
 			const testDB = mockDuplicateRoleDB();
 			testDB.grantRolesToRole.mockImplementation( errorData.fn );
 
@@ -267,7 +187,7 @@ describe("loadRole", () => {
 });
 
 describe("loadRoles", () => {
-	const mockRoleDBForData = mockDBForData(mockRoleDB(), "createRole", "grantPrivilegesToRole");
+	const mockRoleDBForData = MockDB.mockDBForData(mockRoleDB(), "createRole", "grantPrivilegesToRole");
 
 	test("clean roles throw no errors", () => {
 		const mockData = [
@@ -275,7 +195,7 @@ describe("loadRoles", () => {
 			testRoleData({role:"y"}),
 		].map(roleData => roleData.testRole);
 
-		const implData = buildImplData([
+		const implData = MockDB.buildImplData([
 			{isNew: false, throwsError: false},
 			{isNew: true, throwsError: false}
 		]);
@@ -295,7 +215,7 @@ describe("loadRoles", () => {
 			testRoleData({role:"d"})
 		].map(roleData => roleData.testRole);
 
-		const implData = buildImplData([
+		const implData = MockDB.buildImplData([
 			{isNew: false, throwsError: true},
 			{isNew: false, throwsError: false},
 			{isNew: true, throwsError: false},
@@ -312,13 +232,13 @@ describe("loadRoles", () => {
 	});
 });
 
-const mockUserDB = mockDBGenerator({
+const mockUserDB = MockDB.mockDBGenerator({
 	createUser: true,
 	updateUser: true
 });
 
-const mockDuplicateUserDB = mockDBGenerator({
-	createUser: throwDuplicateImplementation.fn,
+const mockDuplicateUserDB = MockDB.mockDBGenerator({
+	createUser: MockDB.throwDuplicateImplementation.fn,
 	updateUser: true
 });
 
@@ -358,7 +278,7 @@ describe("loadUser", () => {
 	});
 
 	describe("reports errors", () => {
-		const errorData = throwErrorImplementation();
+		const errorData = MockDB.throwErrorImplementation();
 
 		test("on creation", () => {
 			const db = mockUserDB();
@@ -381,7 +301,7 @@ describe("loadUser", () => {
 });
 
 describe("loadUsers", () => {
-	const mockUserDBForData = mockDBForData(mockUserDB(), "createUser", "updateUser");
+	const mockUserDBForData = MockDB.mockDBForData(mockUserDB(), "createUser", "updateUser");
 
 	test("clean users throw no errors", () => {
 		const mockData = [
@@ -389,7 +309,7 @@ describe("loadUsers", () => {
 			{user: "b", pwd: "b", roles: ["y", "z"]}
 		];
 
-		const implData = buildImplData([
+		const implData = MockDB.buildImplData([
 			{isNew: false, throwsError: false},
 			{isNew: true, throwsError: false}
 		]);
@@ -409,7 +329,7 @@ describe("loadUsers", () => {
 			{user: "d", pwd: "d", roles: ["y", "z"]}
 		];
 
-		const implData = buildImplData([
+		const implData = MockDB.buildImplData([
 			{isNew: false, throwsError: true},
 			{isNew: false, throwsError: false},
 			{isNew: true, throwsError: false},
@@ -429,9 +349,9 @@ describe("loadUsers", () => {
 describe("authenticateAndLoad", () => {
 
 	const mockFullDBForData = (authenticate, roleImpl, userImpl) => {
-		const baseDB = mockRoleDB(mockUserDB(mockAuthDB(authenticate)()));
-		const mockedDB = mockDBForData(baseDB, "createRole", "grantPrivilegesToRole")(roleImpl);
-		return mockDBForData(mockedDB, "createUser", "updateUser")(userImpl);
+		const baseDB = mockRoleDB(mockUserDB(MockDB.mockAuthDB(authenticate)()));
+		const mockedDB = MockDB.mockDBForData(baseDB, "createRole", "grantPrivilegesToRole")(roleImpl);
+		return MockDB.mockDBForData(mockedDB, "createUser", "updateUser")(userImpl);
 	};
 
 	// Note that userImpl needs to match the order of the expected outcome of normalizeUsers,
@@ -476,7 +396,7 @@ describe("authenticateAndLoad", () => {
 		const userData = testBaseUsers.concat(); 
 		userData.splice(2, 0, testAdmin);
 
-		const userImpl = buildImplData([
+		const userImpl = MockDB.buildImplData([
 			{isNew: true, throwsError: false},
 			{isNew: true, throwsError: false},
 			{isNew: true, throwsError: false},
@@ -501,7 +421,7 @@ describe("authenticateAndLoad", () => {
 		const userData = testBaseUsers.slice(0,1); 
 		userData.splice(2, 0, testAdmin);
 
-		const userImpl = buildImplData([
+		const userImpl = MockDB.buildImplData([
 			{isNew: true, throwsError: false},
 			{isNew: true, throwsError: false}
 		]).data;
@@ -522,7 +442,7 @@ describe("authenticateAndLoad", () => {
 
 		const userData = testBaseUsers.slice(0,2); 
 
-		const userImpl = buildImplData([
+		const userImpl = MockDB.buildImplData([
 			{isNew: true, throwsError: false},
 			{isNew: true, throwsError: false}
 		]).data;
@@ -542,14 +462,14 @@ describe("authenticateAndLoad", () => {
 			testRoleData({role:"bb"})
 		];
 
-		const roleImpl =  buildImplData([
+		const roleImpl =  MockDB.buildImplData([
 			{isNew: true, throwsError: false},
 			{isNew: true, throwsError: false}
 		]).data;
 
 		const userData = testBaseUsers.concat(testAdmin);
 
-		const userImpl = buildImplData([
+		const userImpl = MockDB.buildImplData([
 			{isNew: true, throwsError: false},
 			{isNew: true, throwsError: false},
 			{isNew: true, throwsError: false},
@@ -569,14 +489,14 @@ describe("authenticateAndLoad", () => {
 	test("user-defined roles impacting the admin", () => {
 		const roleData = testRoles.concat();
 
-		const roleImpl =  buildImplData([
+		const roleImpl =  MockDB.buildImplData([
 			{isNew: true, throwsError: false},
 			{isNew: true, throwsError: false}
 		]).data;
 
 		const userData = testBaseUsers.concat(testAdmin);
 
-		const userImpl = buildImplData([
+		const userImpl = MockDB.buildImplData([
 			{isNew: true, throwsError: false},
 			{isNew: true, throwsError: false},
 			{isNew: true, throwsError: false},
@@ -597,7 +517,7 @@ describe("authenticateAndLoad", () => {
 	test("updating roles and users", () => {
 		const roleData = testRoles.concat();
 
-		const roleImplData =  buildImplData([
+		const roleImplData =  MockDB.buildImplData([
 			{isNew: false, throwsError: false},
 			{isNew: true, throwsError: false}
 		]);
@@ -605,7 +525,7 @@ describe("authenticateAndLoad", () => {
 
 		const userData = testBaseUsers.concat(testAdmin);
 
-		const userImplData = buildImplData([
+		const userImplData = MockDB.buildImplData([
 			{isNew: false, throwsError: false},
 			{isNew: false, throwsError: false},
 			{isNew: true, throwsError: false},
@@ -627,7 +547,7 @@ describe("authenticateAndLoad", () => {
 	test("errors creating and updating roles and users", () => {
 		const roleData = testRoles.concat();
 
-		const roleImplData =  buildImplData([
+		const roleImplData =  MockDB.buildImplData([
 			{isNew: false, throwsError: true},
 			{isNew: true, throwsError: false}
 		]);
@@ -635,7 +555,7 @@ describe("authenticateAndLoad", () => {
 
 		const userData = testBaseUsers.concat(testAdmin);
 
-		const userImplData = buildImplData([
+		const userImplData = MockDB.buildImplData([
 			{isNew: true, throwsError: true},
 			{isNew: false, throwsError: true},
 			{isNew: true, throwsError: false},

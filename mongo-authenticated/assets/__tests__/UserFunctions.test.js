@@ -20,6 +20,51 @@ test("create builds User", () => {
 	expect(outUser.roles).not.toBe(roles);
 });
 
+describe("createUserOfType", () => {
+	test("Creates a predefined user", () => {
+		const expectedUser = {
+			user: "user",
+			pwd: "pwd",
+			roles: adminRoles
+		};
+		const type = "userAdmin";
+
+		const result = UserFunctions.createUserOfType(expectedUser.user, expectedUser.pwd, type);
+
+		expect(result).toEqual(expectedUser);
+	});
+
+	test("Adds updateSelf to roles", () => {
+		const expectedUser = {
+			user: "user",
+			pwd: "pwd",
+			roles: adminRoles.concat("updateSelf")
+		};
+		const type = "userAdmin";
+
+		const result = UserFunctions.createUserOfType(expectedUser.user, expectedUser.pwd, type, true);
+
+		expect(result).toEqual(expectedUser);
+	});
+
+	test("Throws error when attempting to specify an unspecified type", () => {
+		const useInvalidType = () => {
+			UserFunctions.createUserOfType("a", "b", "not a viable type");
+		};
+
+		expect(useInvalidType).toThrow();
+	});
+});
+
+test("getUserTypes returns array of types", () => {
+	expect( UserFunctions.getUserTypes() ).toEqual( expect.arrayContaining(["userAdmin"]) );
+})
+
+describe("registerUserType", () => {
+	test.todo("Creating new type");
+	test.todo("Adding to existing type");
+});
+
 test("createAdmin creates User with admin roles", () => {
 	const testUser = {
 		user: "a",
