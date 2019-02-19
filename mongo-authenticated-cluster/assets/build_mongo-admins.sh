@@ -9,8 +9,11 @@ cat >> /mongo-admins.js <<EOF
 const anyActionPrivilege = UserDefinedRoleFunctions.privilege({anyResource: true}, ["anyAction"]);
 roles.push( UserDefinedRoleFunctions.role("anyAction", [anyActionPrivilege], []) );
 
-users.push( UserFunctions.create("${mongo_cluster_admin_name}", "${mongo_cluster_admin_pwd}", ["clusterAdmin", "updateSelf"]) );
-users.push( UserFunctions.create("${mongo_backup_admin_name}", "${mongo_backup_admin_pwd}", ["anyAction"]) );
+UserFunctions.registerUserType("backupAdmin", ["anyAction"]);
+UserFunctions.registerUserType("clusterAdmin", ["clusterAdmin"]);
+
+users.push( UserFunctions.createUserOfType("${mongo_cluster_admin_name}", "${mongo_cluster_admin_pwd}", "clusterAdmin") );
+users.push( UserFunctions.createUserOfType("${mongo_backup_admin_name}", "${mongo_backup_admin_pwd}", "backupAdmin") );
 
 EOF
 

@@ -32,7 +32,8 @@ const DatabaseFunctions = (function(Mongo, HelperFunctions, UserFunctions) {
 			db.createUser( {user, pwd, roles} );
 		},
 		() => {
-			db.updateUser(user, {pwd, roles} );
+			db.updateUser(user, {pwd} );
+			db.grantRolesToUser(user, roles);
 		},
 		duplicateErrorPredicate
 	);
@@ -45,7 +46,7 @@ const DatabaseFunctions = (function(Mongo, HelperFunctions, UserFunctions) {
 		if ( !UserFunctions.isAdmin(admin) ) {
 			return [admin.user + " is not set to be a user admin"];
 		}
-		let errors = [].concat( loadUser(db, admin) || []); // take advantage of concat(undefined) not changing the array
+		let errors = [].concat( loadUser(db, admin) || []);
 		if ( authenticate(db, admin) ) {
 			errors = errors.concat( loadRoles(db, roles) );
 			errors = errors.concat( loadUsers(db, normalizedUsers) );

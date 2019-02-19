@@ -234,12 +234,14 @@ describe("loadRoles", () => {
 
 const mockUserDB = MockDB.mockDBGenerator({
 	createUser: true,
-	updateUser: true
+	updateUser: true,
+	grantRolesToUser: true
 });
 
 const mockDuplicateUserDB = MockDB.mockDBGenerator({
 	createUser: MockDB.throwDuplicateImplementation.fn,
-	updateUser: true
+	updateUser: true,
+	grantRolesToUser: true
 });
 
 describe("loadUser", () => {
@@ -251,10 +253,12 @@ describe("loadUser", () => {
 
 	const expectedUpdateUserResults = [
 		testUser.user,
-		{
-			pwd: testUser.pwd,
-			roles: testUser.roles
-		}
+		{ pwd: testUser.pwd }
+	];
+
+	const expectedGrantRolesToUserResults = [
+		testUser.user,
+		testUser.roles
 	];
 
 	test("creates new user", () => {
@@ -265,6 +269,7 @@ describe("loadUser", () => {
 		expect(result).toBeUndefined();
 		expect(db.createUser.mock.calls[0]).toEqual([testUser]);
 		expect(db.updateUser.mock.calls).toHaveLength(0);
+		expect(db.grantRolesToUser.mock.calls).toHaveLength(0);
 	});
 
 	test("updates existing user", () => {
@@ -275,6 +280,7 @@ describe("loadUser", () => {
 		expect(result).toBeUndefined();
 		expect(db.createUser.mock.calls[0]).toEqual([testUser]);
 		expect(db.updateUser.mock.calls[0]).toEqual(expectedUpdateUserResults);
+		expect(db.grantRolesToUser.mock.calls[0]).toEqual(expectedGrantRolesToUserResults);
 	});
 
 	describe("reports errors", () => {
@@ -289,9 +295,18 @@ describe("loadUser", () => {
 			expect(result).toEqual(errorData.message);
 		});
 
-		test("on update", () => {
+		test("on update password", () => {
 			const db = mockDuplicateUserDB();
 			db.updateUser.mockImplementation(errorData.fn);
+
+			const result = DatabaseFunctions.loadUser(db, testUser);
+
+			expect(result).toEqual(errorData.message);
+		});
+
+		test("on update roles", () => {
+			const db = mockDuplicateUserDB();
+			db.grantRolesToUser.mockImplementation(errorData.fn);
 
 			const result = DatabaseFunctions.loadUser(db, testUser);
 

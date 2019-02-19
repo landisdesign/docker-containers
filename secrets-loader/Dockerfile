@@ -1,5 +1,5 @@
 FROM gcr.io/distroless/static
 
-COPY secrets.sh /secrets.sh
+COPY *.sh /
 
 ENTRYPOINT ["echo", "Do not attempt to run this image. Copy files from it."]

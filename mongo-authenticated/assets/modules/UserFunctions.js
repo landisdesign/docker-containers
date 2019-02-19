@@ -7,8 +7,8 @@ const UserFunctions = (function(RoleDescriptorFunctions, UserDefinedRoleFunction
 	});
 
 	const roleType = {
-		"dbAdmin": ["dbAdminAnyDatabase"],
-		"userAdmin": ["userAdmin", "userAdminAnyDatabase", "hostManager"],
+		"dbAdminAnyDatabase": ["dbAdminAnyDatabase"],
+		"userAdminAnyDatabase": ["userAdmin", "userAdminAnyDatabase", "hostManager"],
 		"backupAdmin": ["backup", "restore"]
 	};
 
@@ -17,7 +17,7 @@ const UserFunctions = (function(RoleDescriptorFunctions, UserDefinedRoleFunction
 			throw new Error("User \"" + user + "\" could not be created: User type \"" + type + "\" is not registered.");
 		}
 		const roles = updateSelf ? roleType[type].concat("updateSelf") : roleType[type];
-		return UserFunctions.create(user, pwd, roles);
+		return create(user, pwd, roles);
 	};
 
 	const registerUserType = (type, roles) => {
@@ -30,8 +30,6 @@ const UserFunctions = (function(RoleDescriptorFunctions, UserDefinedRoleFunction
 	};
 
 	const getUserTypes = () => Object.keys(roleType);
-
-	const createAdmin = (user, pwd) => createUserOfType(user, pwd, "userAdmin");
 
 	const isUser = user => {
 		if ( (user == null) || (typeof user !== "object") ) {
@@ -53,7 +51,7 @@ const UserFunctions = (function(RoleDescriptorFunctions, UserDefinedRoleFunction
 		if (!isUser(user)) {
 			return false;
 		}
-		const userAdminRoles = roleType.userAdmin;
+		const userAdminRoles = roleType.userAdminAnyDatabase;
 		return user.roles.reduce(
 			(acc, role) => {
 				// Only looking for global roles. DB-related roles should not be counted.
@@ -114,7 +112,6 @@ const UserFunctions = (function(RoleDescriptorFunctions, UserDefinedRoleFunction
 	
 	return {
 		create,
-		createAdmin,
 		createUserOfType,
 		getUserTypes,
 		isAdmin,

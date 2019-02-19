@@ -27,7 +27,7 @@ describe("createUserOfType", () => {
 			pwd: "pwd",
 			roles: adminRoles
 		};
-		const type = "userAdmin";
+		const type = "userAdminAnyDatabase";
 
 		const result = UserFunctions.createUserOfType(expectedUser.user, expectedUser.pwd, type);
 
@@ -40,7 +40,7 @@ describe("createUserOfType", () => {
 			pwd: "pwd",
 			roles: adminRoles.concat("updateSelf")
 		};
-		const type = "userAdmin";
+		const type = "userAdminAnyDatabase";
 
 		const result = UserFunctions.createUserOfType(expectedUser.user, expectedUser.pwd, type, true);
 
@@ -57,7 +57,7 @@ describe("createUserOfType", () => {
 });
 
 test("getUserTypes returns array of types", () => {
-	expect( UserFunctions.getUserTypes() ).toEqual( expect.arrayContaining(["userAdmin"]) );
+	expect( UserFunctions.getUserTypes() ).toEqual( expect.arrayContaining(["userAdminAnyDatabase"]) );
 })
 
 describe("registerUserType", () => {
@@ -97,20 +97,6 @@ describe("registerUserType", () => {
 		const resultingUser = UserFunctions.createUserOfType("name", "pwd", typeName);
 		expectArraysContainSameElements(resultingUser.roles, expectedRoles);
 	});
-});
-
-test("createAdmin creates User with admin roles", () => {
-	const testUser = {
-		user: "a",
-		pwd: "b",
-		roles: adminRoles
-	};
-	const {user, pwd, roles} = testUser;
-
-	const outUser = UserFunctions.createAdmin(user, pwd);
-
-	expect(outUser).toEqual(testUser);
-	expect(outUser.roles).not.toBe(roles);
 });
 
 test("isUser passes possible users", () => {

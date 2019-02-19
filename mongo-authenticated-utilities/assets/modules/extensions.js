@@ -1,4 +1,4 @@
-extensions = (DatabaseFunctions, HelperFunctions, RoleDescriptorFunctions, UserFunctions) => {
+const extensions = (DatabaseFunctions, HelperFunctions, RoleDescriptorFunctions, UserFunctions) => {
 
 	const changePassword = (db, user) => {
 		try {
