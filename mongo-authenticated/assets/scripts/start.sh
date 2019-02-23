@@ -9,7 +9,7 @@ mongo_startup_js="/mongo-startup.js"
 
 . ./pre_startup.sh
 
-$mongod --bind_ip_all --smallfiles --logpath $mongod_log --keyFile $mongod_keyfile ${MONGO_OPTIONS} &
+$mongod --fork --bind_ip_all --smallfiles --logpath $mongod_log --keyFile $mongod_keyfile ${MONGO_OPTIONS}
 
 while ! $mongo $mongo_startup_js
 do
@@ -19,4 +19,4 @@ done
 
 . ./post_startup.sh
 
-fg
+tail -fn +1 $mongod_log

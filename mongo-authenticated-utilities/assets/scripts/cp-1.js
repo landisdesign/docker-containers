@@ -7,3 +7,5 @@ load("/DatabaseFunctions.js");
 load("/extensions.js");
 
 extensions(DatabaseFunctions, HelperFunctions, RoleDescriptorFunctions, UserFunctions);
+
+passwords = [];

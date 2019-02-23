@@ -3,7 +3,7 @@ $mongo -u "${mongo_cluster_admin_name}" -p "${mongo_cluster_admin_pwd}" --authen
 
 wait
 
-$mongod --bind_ip_all --smallfiles --logpath $mongod_log --keyFile $mongod_keyfile --replSet ${MONGO_REPLICA_NAME} &
+$mongod --bind_ip_all --smallfiles --fork --logpath $mongod_log --keyFile $mongod_keyfile --replSet ${MONGO_REPLICA_NAME}
 
 # ping server until connected then continue
 while ! $mongo --quiet --eval "quit()"
