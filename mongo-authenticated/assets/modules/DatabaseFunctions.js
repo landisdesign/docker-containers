@@ -4,7 +4,7 @@ const DatabaseFunctions = (function(Mongo, HelperFunctions, UserFunctions) {
 		duplicateDocument: 11000
 	};
 
-	const getDB = (name = "admin") => ( new Mongo() ).getDB(name);
+	const getDB = (name = "admin", host = null) => (host ? (new Mongo(host)) : (new Mongo()) ).getDB(name)
 
 	const authenticate = (db, {user, pwd}) => db.auth(user, pwd);
 

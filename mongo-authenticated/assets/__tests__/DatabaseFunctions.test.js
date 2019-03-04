@@ -1,25 +1,29 @@
 const DatabaseFunctions = require("../modules/DatabaseFunctions");
 const HelperFunctions = require("../modules/HelperFunctions");
-const Mongo = require("../modules/__mocks__/Mongo"); // Mongo is our mock object for retrieving our database mocks.
+const Mongo = require("../modules/__mocks__/Mongo");
 const MockDB = require("../../../__jest-helpers__/MockDB")(HelperFunctions);
 
-test("Database is retrieved", () => {
-	let testDB = {};
-	Mongo.setDB(testDB);
+describe("getDB", () => {
+	test("Default DB", () => {
+		const testDB = {};
+		Mongo.setDB(testDB);
 
-	let outDb = DatabaseFunctions.getDB();
+		const outDb = DatabaseFunctions.getDB();
 
-	expect(outDb).toEqual(testDB);
-	expect(outDb.name).toMatch("admin");
+		expect(outDb).toBe(testDB);
+		expect(outDb.name).toMatch("admin");
+	});
 
-	testDB = {};
-	Mongo.setDB(testDB);
-	const dbName = "test";
+	test("Another DB", () => {
+		const testDB = {};
+		Mongo.setDB(testDB);
 
-	outDb = DatabaseFunctions.getDB(dbName);
+		const dbName = "test";
+		const outDb = DatabaseFunctions.getDB(dbName);
 
-	expect(outDb).toEqual(testDB);
-	expect(outDb.name).toMatch(dbName);
+		expect(outDb).toBe(testDB);
+		expect(outDb.name).toMatch(dbName);
+	});
 });
 
 test("Authentication properly attempted", () => {

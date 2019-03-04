@@ -1,19 +1,14 @@
 
-const authDB = DatabaseFunctions.getDB(authDBName);
-const userDB = userDBName == authDBName ? authDB : DatabaseFunctions.getDB(userDBName);
+const userDB = DatabaseFunctions.getDB(dbName, hostUrl);
 
-const executor = (authDB, userDB) => user => {
-	const errorMessage = DatabaseFunctions.changePassword(userDB, user);
-	if (errorMessage) return errorMessage;
-	if (user.auth) {
-		if (DatabaseFunctions.authenticate(authDB, user) == 0) {
-			return "User " + user.user + " could not authenticate after changing password";
-		}
+if (DatabaseFunctions.authenticate(userDB, authUser)) {
+	const results = DatabaseFunctions.changePasswords(userDB, passwords);
+
+	if (results.length) {
+		const message = "Errors occurred changing passwords:\n\n * " + results.join("\n * ");
+		throw new Error(message);
 	}
-};
-const results = HelperAction.collectResults(executor, passwords);
-
-if (results.length) {
-	const message = "Errors occurred changing passwords:" + results.join("\n * ");
-	throw new Error(message);
+}
+else {
+	throw new Error("Could not authenticate " + authUser.user);
 }

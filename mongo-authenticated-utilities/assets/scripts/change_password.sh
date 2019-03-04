@@ -1,12 +1,10 @@
-#! /bin/sh
-
 rm -f ./~password_data.txt
 touch ./~password_data.txt
 
 OPTIND=1
 missing_args=""
 invalid_args=""
-while getopts ":a:c:d:h:p:u:" opt
+while getopts "a:c:d:h:p:u:" opt
 do
 	case "${opt}" in
 		"a" )
@@ -90,10 +88,20 @@ then
 	exit 1
 fi
 
-rm -f ./~data.txt
-echo "const authDBName = \"${auth_db}\";" > ./~data.js
-echo "const userDBName = \"${user_db}\";" >> ./~data.js
-awk -v auth_user="${auth_user}" 'BEGIN{FS="="} 1{printf("passwords.push({user: \"%s\", pwd: \"%s\", auth: %s});\n", $1, $2, (auth_user == $1 ? "true" : "false") );}' ./~password_data.txt >> ./~data.js
+if [ "${auth_db}" = "${user_db}" ]
+then
+	do_auth=1
+else
+	do_auth=0
+fi
+
+rm -f ./~data.js
+touch ./~data.js
+awk -v auth_user="${auth_user}" -v do_auth=$do_auth 'BEGIN{FS="="} 1{printf("passwords.push({user: \"%s\", pwd: \"%s\", auth: %s});\n", $1, $2, (do_auth && (auth_user == $1) ? "true" : "false") );}' ./~password_data.txt >> ./~data.js
+echo >> ./~data.js
+echo "const dbName = \"${user_db}\";" >> ./~data.js
+echo "const hostUrl = \"${host_url}\";" >> ./~data.js
+echo "const authUser = UserFunctions.create(\"${auth_user}\", \"${auth_pwd}\", []);" >> ./~data.js
 
 cat ./cp-1.js ./~data.js ./cp-2.js > ./~change-password.js
 rm -f ./~password_data.txt ./~data.js

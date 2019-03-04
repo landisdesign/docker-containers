@@ -13,28 +13,28 @@ describe("Change password", () => {
 	error.code = 12345;
 	const errorResults = HelperFunctions.errorMessage(error);
 
-	const mockDB = (changed) => MockDB.mockDBGenerator({
+	const mockDB = (changed, authenticated = true) => MockDB.mockDBGenerator({
 		changeUserPassword: () => {
 			if (!changed) {
 				throw error;
 			} 
-		}
+		},
+		auth: () => authenticated ? 1 : 0
 	})();
 
 	const testUser = UserFunctions.create("self", "newPwd", []);
-	const testUserArgs = [testUser.user, {pwd: testUser.pwd}];
+	const authUser = Object.assign({auth: true}, testUser);
+	const testUserArgs = [testUser.user, testUser.pwd];
 
-	test("Successful changed password", () => {
+	test("Successful changed password without authentication", () => {
 		const db = mockDB(true);
-
 		const result = DatabaseFunctions.changePassword(db, testUser);
 
 		expect(result).toBeUndefined();
 		expect(db.changeUserPassword.mock.calls[0]).toEqual(testUserArgs);
+		expect(db.auth.mock.calls).toHaveLength(0);
 	});
 
-	// the reason the change was unsuccessful will likely be an authentication
-	// issue, but that's not relevant to the situation.
 	test("Unsuccessfully changed password", () => {
 		const db = mockDB(false);
 
@@ -42,6 +42,28 @@ describe("Change password", () => {
 
 		expect(result).toEqual(errorResults);
 		expect(db.changeUserPassword.mock.calls[0]).toEqual(testUserArgs);
+		expect(db.auth.mock.calls).toHaveLength(0);
+	});
+
+	test("Successfully changed and authenticated", () => {
+		const db = mockDB(true, true);
+
+		const result = DatabaseFunctions.changePassword(db, authUser);
+
+		expect(result).toBeUndefined();
+		expect(db.changeUserPassword.mock.calls[0]).toEqual(testUserArgs);
+		expect(db.auth.mock.calls[0]).toEqual(testUserArgs);
+	});
+
+	test("Successfully changed and did not authenticated", () => {
+		const db = mockDB(true, false);
+
+		const result = DatabaseFunctions.changePassword(db, authUser);
+
+		expect(result).not.toEqual(errorResults); // not a change issue, should not return change error
+		expect(result).toEqual( expect.stringMatching(/\w/) ); // content isn't relevant; string presence is
+		expect(db.changeUserPassword.mock.calls[0]).toEqual(testUserArgs);
+		expect(db.auth.mock.calls[0]).toEqual(testUserArgs);
 	});
 });
 
@@ -61,7 +83,7 @@ describe("Change multiple passwords simultaneously", () => {
 		["user4", "pwd4"],
 		["user5", "pwd5"]
 	].map(arr => UserFunctions.create(arr[0], arr[1], []));
-	const testUsersArgs = testUsers.map(item => [item.user, {pwd: item.pwd}]);
+	const testUsersArgs = testUsers.map(item => [item.user, item.pwd]);
 
 	test("Properly reports clean updates", () => {
 		const implData = MockDB.buildSimpleImplData([

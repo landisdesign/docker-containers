@@ -1,8 +1,13 @@
 const extensions = (DatabaseFunctions, HelperFunctions, RoleDescriptorFunctions, UserFunctions) => {
 
-	const changePassword = (db, user) => {
+	const changePassword = (db, {user, pwd, auth}) => {
 		try {
-			db.changeUserPassword(user.user, { pwd: user.pwd } );
+			db.changeUserPassword(user, pwd);
+			if (auth) {
+				if (DatabaseFunctions.authenticate(db, {user, pwd}) == 0) {
+					return "User " + user + " could not authenticate after changing password";
+				}
+			}
 		}
 		catch (e) {
 			return HelperFunctions.errorMessage(e);
