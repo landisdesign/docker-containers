@@ -2,7 +2,7 @@
 const userDB = DatabaseFunctions.getDB(dbName, hostUrl);
 
 if (DatabaseFunctions.authenticate(userDB, authUser)) {
-	const results = DatabaseFunctions.changePasswords(userDB, passwords);
+	const results = DatabaseFunctions.changePasswords(userDB, changedUsers);
 
 	if (results.length) {
 		const message = "Errors occurred changing passwords:\n\n * " + results.join("\n * ");

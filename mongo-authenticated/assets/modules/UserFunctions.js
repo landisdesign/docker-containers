@@ -9,7 +9,9 @@ const UserFunctions = (function(RoleDescriptorFunctions, UserDefinedRoleFunction
 	const roleType = {
 		"dbAdminAnyDatabase": ["dbAdminAnyDatabase"],
 		"userAdminAnyDatabase": ["userAdmin", "userAdminAnyDatabase", "hostManager"],
-		"backupAdmin": ["backup", "restore"]
+		"backupAdmin": ["backup", "restore"],
+		"dbOwner": ["dbOwner"],
+		"readWrite": ["readWrite"]
 	};
 
 	const createUserOfType = (user, pwd, type, updateSelf = false) => {

@@ -4,11 +4,39 @@ const DatabaseFunctions = (function(Mongo, HelperFunctions, UserFunctions) {
 		duplicateDocument: 11000
 	};
 
+	const duplicateErrorPredicate = e => e.code == errorCodes.duplicateDocument;
+
+
 	const getDB = (name = "admin", host = null) => (host ? (new Mongo(host)) : (new Mongo()) ).getDB(name)
 
 	const authenticate = (db, {user, pwd}) => db.auth(user, pwd);
 
-	const duplicateErrorPredicate = e => e.code == errorCodes.duplicateDocument;
+	const changePassword = (db, {user, pwd, auth}) => {
+		try {
+			db.changeUserPassword(user, pwd);
+			if (auth) {
+				if (DatabaseFunctions.authenticate(db, {user, pwd}) == 0) {
+					return "User " + user + " could not authenticate after changing password";
+				}
+			}
+		}
+		catch (e) {
+			return HelperFunctions.errorMessage(e);
+		}
+	};
+
+	const changePasswords = (db, users) => {
+		return HelperFunctions.collectResults(HelperFunctions.embedDB(db, changePassword), users);
+	};
+
+	const dropUser = (db, {user}) => {
+		try {
+			db.dropUser(user);
+		}
+		catch (e) {
+			return HelperFunctions.errorMessage(e);
+		}
+	};
 
 	const loadRole = (db, {role, privileges, roles} ) => HelperFunctions.fallbackAction(
 		() => {
@@ -60,6 +88,9 @@ const DatabaseFunctions = (function(Mongo, HelperFunctions, UserFunctions) {
 	return {
 		getDB,
 		authenticate,
+		changePassword,
+		changePasswords,
+		dropUser,
 		loadRole,
 		loadRoles,
 		loadUser,

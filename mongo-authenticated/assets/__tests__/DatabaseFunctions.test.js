@@ -45,6 +45,156 @@ test("Authentication properly attempted", () => {
 	expect(args).toEqual(outArgs);
 });
 
+describe("Change password", () => {
+
+	const error = new Error("Password change failed");
+	error.code = 12345;
+	const errorResults = HelperFunctions.errorMessage(error);
+
+	const mockDB = (changed, authenticated = true) => MockDB.mockDBGenerator({
+		changeUserPassword: () => {
+			if (!changed) {
+				throw error;
+			} 
+		},
+		auth: () => authenticated ? 1 : 0
+	})();
+
+	const testUser = {
+		user: "self",
+		pwd: "newPwd",
+		roles: []
+	};
+	const authUser = Object.assign({auth: true}, testUser);
+	const testUserArgs = [testUser.user, testUser.pwd];
+
+	test("Successful changed password without authentication", () => {
+		const db = mockDB(true);
+		const result = DatabaseFunctions.changePassword(db, testUser);
+
+		expect(result).toBeUndefined();
+		expect(db.changeUserPassword.mock.calls[0]).toEqual(testUserArgs);
+		expect(db.auth.mock.calls).toHaveLength(0);
+	});
+
+	test("Unsuccessfully changed password", () => {
+		const db = mockDB(false);
+
+		const result = DatabaseFunctions.changePassword(db, testUser);
+
+		expect(result).toEqual(errorResults);
+		expect(db.changeUserPassword.mock.calls[0]).toEqual(testUserArgs);
+		expect(db.auth.mock.calls).toHaveLength(0);
+	});
+
+	test("Successfully changed and authenticated", () => {
+		const db = mockDB(true, true);
+
+		const result = DatabaseFunctions.changePassword(db, authUser);
+
+		expect(result).toBeUndefined();
+		expect(db.changeUserPassword.mock.calls[0]).toEqual(testUserArgs);
+		expect(db.auth.mock.calls[0]).toEqual(testUserArgs);
+	});
+
+	test("Successfully changed and did not authenticated", () => {
+		const db = mockDB(true, false);
+
+		const result = DatabaseFunctions.changePassword(db, authUser);
+
+		expect(result).not.toEqual(errorResults); // not a change issue, should not return change error
+		expect(result).toEqual( expect.stringMatching(/\w/) ); // content isn't relevant; string presence is
+		expect(db.changeUserPassword.mock.calls[0]).toEqual(testUserArgs);
+		expect(db.auth.mock.calls[0]).toEqual(testUserArgs);
+	});
+});
+
+describe("Change multiple passwords simultaneously", () => {
+
+	const mockDB = MockDB.mockDBForSimpleData(
+		MockDB.mockDBGenerator({
+			changeUserPassword: true
+		})(),
+		"changeUserPassword"
+	);
+
+	const testUsers = [
+		["user1", "pwd1"],
+		["user2", "pwd2"],
+		["user3", "pwd3"],
+		["user4", "pwd4"],
+		["user5", "pwd5"]
+	].map(arr => ({
+		user: arr[0],
+		pwd: arr[1],
+		roles: []
+	}));
+	const testUsersArgs = testUsers.map(item => [item.user, item.pwd]);
+
+	test("Properly reports clean updates", () => {
+		const implData = MockDB.buildSimpleImplData([
+			false, false, false, false, false
+		]);
+		const testDB = mockDB(implData.data);
+
+		const results = DatabaseFunctions.changePasswords(testDB, testUsers);
+		expect(results).toHaveLength(0);
+		expect(testDB.changeUserPassword.mock.calls).toEqual(testUsersArgs);
+	});
+
+	// Reason for errors would likely be due to authentication issues, but that
+	// isn't germane to the test.
+	test("Properly reports incomplete updates", () => {
+		const implData = MockDB.buildSimpleImplData([
+			false, true, false, false, true
+		]);
+		const testDB = mockDB(implData.data);
+
+		const results = DatabaseFunctions.changePasswords(testDB, testUsers);
+		expect(results).toEqual(implData.messages);
+		expect(testDB.changeUserPassword.mock.calls).toEqual(testUsersArgs);
+	});
+});
+
+describe("Drop user", () => {
+
+	const error = new Error("Could not drop user");
+	error.code = 12345;
+	const errorMessage = HelperFunctions.errorMessage(error);
+
+	const mockDB = successful => MockDB.mockDBGenerator({
+		dropUser: () => {
+			if ( !successful ) {
+				throw error;
+			}
+		}
+	})();
+
+	const testUser = {
+		user: "doomedUser",
+		pwd: "12345",
+		roles: []
+	};
+
+	test("Dropped existing user", () => {
+		const testDB = mockDB(true);
+
+		const results = DatabaseFunctions.dropUser(testDB, testUser);
+
+		expect(results).toBeUndefined();
+		expect(testDB.dropUser.mock.calls[0]).toEqual([testUser.user]);
+	});
+
+	test("Failed to drop user", () => {
+		const testDB = mockDB(false);
+
+		const results = DatabaseFunctions.dropUser(testDB, testUser);
+
+		expect(results).toEqual(errorMessage);
+		expect(testDB.dropUser.mock.calls[0]).toEqual([testUser.user]);
+	});
+});
+
 const mockRoleDB = MockDB.mockDBGenerator({
 	createRole: true,
 	grantPrivilegesToRole: true,

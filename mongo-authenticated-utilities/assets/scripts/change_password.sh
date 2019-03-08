@@ -95,20 +95,20 @@ else
 	do_auth=0
 fi
 
-rm -f ./~data.js
-touch ./~data.js
-awk -v auth_user="${auth_user}" -v do_auth=$do_auth 'BEGIN{FS="="} 1{printf("passwords.push({user: \"%s\", pwd: \"%s\", auth: %s});\n", $1, $2, (do_auth && (auth_user == $1) ? "true" : "false") );}' ./~password_data.txt >> ./~data.js
-echo >> ./~data.js
-echo "const dbName = \"${user_db}\";" >> ./~data.js
+echo "const dbName = \"${user_db}\";" > ./~data.js
 echo "const hostUrl = \"${host_url}\";" >> ./~data.js
 echo "const authUser = UserFunctions.create(\"${auth_user}\", \"${auth_pwd}\", []);" >> ./~data.js
 
-cat ./cp-1.js ./~data.js ./cp-2.js > ./~change-password.js
-rm -f ./~password_data.txt ./~data.js
+echo "const changedUsers = [];" > ./~changed-users.js
+awk -v auth_user="${auth_user}" -v do_auth=$do_auth 'BEGIN{FS="="} 1{printf("changedUsers.push({user: \"%s\", pwd: \"%s\", auth: %s});\n", $1, $2, (do_auth && (auth_user == $1) ? "true" : "false") );}' ./~password_data.txt >> ./~changed-users.js
+echo >> ./~changed-users.js
+
+cat ./setup.js ./~data.js ./~changed-users.js ./change-password.js > ./~change-password.js
+#rm -f ./~password_data.txt ./~changed-users.js
 
 RC=0
 
 mongo -host "${host_url}" -u "${auth_user}" -p "${auth_pwd}" --authenticationDatabase "${auth_db}" ./~change-password.js || RC=$?
-rm -f ./~change-password.js
+#rm -f ./~change-password.js
 
 exit $RC
